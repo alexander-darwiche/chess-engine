@@ -13,7 +13,8 @@ class Chess():
         '''
         self.x_notation = ['a','b','c','d','e','f','g','h'] # the chess board is 8x8, this is the x-axis Notation/Coordinate
         self.y_notation = ['8','7','6','5','4','3','2','1'] # the chess board is 8x8, this is the x-axis Notation/Coordinate
-
+        self.castling = [1,1,1,1] # These will be changed to 1 if the rooks or the king change position. This indicates the allowability of castling.
+ 
         self.chess_pieces = {
             'p': 1, 
             'n': 2, 
@@ -32,10 +33,8 @@ class Chess():
             }
         
         self.current_player = 1 # This alternates back and forth, White is first to play (1) and then Black is -1
-        
         self.set_inital_position()
         self.display_game()
-
 
     
     def set_inital_position(self):
@@ -97,7 +96,7 @@ class Chess():
 
     
     def move_piece(self,current_position_notation, next_position_notation):
-
+        
         # Read in notation
         current_position_x = list(current_position_notation)[0].lower()
         current_position_y = list(current_position_notation)[1]
@@ -105,8 +104,6 @@ class Chess():
         # Read in notation
         next_position_x = list(next_position_notation)[0].lower()
         next_position_y = list(next_position_notation)[1]
-        
-        
         
 
         if (current_position_x not in self.x_notation) or (current_position_y not in self.y_notation) or (next_position_x not in self.x_notation) or (next_position_y not in self.y_notation):
@@ -124,16 +121,98 @@ class Chess():
             valid_move = self.check_valid_move(current_position,next_position)
 
             if (valid_move):
-                print('This is a vaild Move!\n\n\n\n')
-                self.board[next_position_y][next_position_x] = self.board[current_position_y][current_position_x]
-                self.board[current_position_y][current_position_x] = 0
-                self.current_player = self.current_player * -1 
+                
+                # Castle Queen Side as Black
+                if current_position == [4,0] and next_position == [2,0]:
+                    if self.castling[0] == 1:
+                        rook_current_position_x = 0
+                        rook_current_position_y = 0
+                        rook_next_position_x = 3
+                        rook_next_position_y = 0
+                        
+                        self.board[next_position_y][next_position_x] = self.board[current_position_y][current_position_x]
+                        self.board[current_position_y][current_position_x] = 0
+                        self.board[rook_next_position_y][rook_next_position_x] = self.board[rook_current_position_y][rook_current_position_x]
+                        self.board[rook_current_position_y][rook_current_position_x] = 0
+        
+                        self.current_player = self.current_player * -1 
+                        print('This is a vaild Move!\n\n\n\n')
+                    else:
+                        print("Invalid Move!\n\n\n\n")
+                # Castle King Side as Black
+                elif current_position == [4,0] and next_position == [6,0]:
+                    if self.castling[1] == 1:
+                        rook_current_position_x = 7
+                        rook_current_position_y = 0
+                        rook_next_position_x = 5
+                        rook_next_position_y = 0
+                        
+                        self.board[next_position_y][next_position_x] = self.board[current_position_y][current_position_x]
+                        self.board[current_position_y][current_position_x] = 0
+                        self.board[rook_next_position_y][rook_next_position_x] = self.board[rook_current_position_y][rook_current_position_x]
+                        self.board[rook_current_position_y][rook_current_position_x] = 0
+                
+                        self.current_player = self.current_player * -1 
+                    else:
+                        print("Invalid Move!\n\n\n\n")
+                # Castle Queen Side as Black
+                elif current_position == [4,7] and next_position == [2,7]:
+                    if self.castling[2] == 1:
+                        rook_current_position_x = 0
+                        rook_current_position_y = 7
+                        rook_next_position_x = 3
+                        rook_next_position_y = 7
+                        
+                        self.board[next_position_y][next_position_x] = self.board[current_position_y][current_position_x]
+                        self.board[current_position_y][current_position_x] = 0
+                        self.board[rook_next_position_y][rook_next_position_x] = self.board[rook_current_position_y][rook_current_position_x]
+                        self.board[rook_current_position_y][rook_current_position_x] = 0
+        
+                        self.current_player = self.current_player * -1 
+                        print('This is a vaild Move!\n\n\n\n')
+                    else:
+                        print("Invalid Move!\n\n\n\n")
+                # Castle King Side as Black
+                elif current_position == [4,7] and next_position == [6,7]:
+                    if self.castling[3] == 1:
+                        rook_current_position_x = 7
+                        rook_current_position_y = 7
+                        rook_next_position_x = 5
+                        rook_next_position_y = 7
+                        
+                        self.board[next_position_y][next_position_x] = self.board[current_position_y][current_position_x]
+                        self.board[current_position_y][current_position_x] = 0
+                        self.board[rook_next_position_y][rook_next_position_x] = self.board[rook_current_position_y][rook_current_position_x]
+                        self.board[rook_current_position_y][rook_current_position_x] = 0
+                
+                        self.current_player = self.current_player * -1 
+                    else:
+                        print("Invalid Move!\n\n\n\n")
+                else:
+                    self.board[next_position_y][next_position_x] = self.board[current_position_y][current_position_x]
+                    self.board[current_position_y][current_position_x] = 0
+                    self.current_player = self.current_player * -1 
+
+
+                    if current_position == [0,0] or next_position == [0,0]: # If rook moves disable castling to that side
+                        self.castling[0] = 0
+                    elif current_position == [7,0] or next_position == [7,0]: # If rook moves disable castling to that side
+                        self.castling[1] = 0
+                    elif current_position == [0,7] or next_position == [0,7]: # If rook moves disable castling to that side
+                        self.castling[2] = 0
+                    elif current_position == [7,7] or next_position == [7,7]: # If rook moves disable castling to that side
+                        self.castling[3] = 0
+                    elif current_position == [4,0]: # If King moves, disable all castling
+                        self.castling[0] = 0
+                        self.castling[1] = 0
+                    elif current_position == [4,7]: # If King moves, disable all castling
+                        self.castling[2] = 0
+                        self.castling[3] = 0
+                
             else:
                 print("Invalid Move!\n\n\n\n")
 
             
-
-
     def check_valid_move(self,current_position,next_position):
 
         # Ensure white player is moving white pieces, and black player is moving black pieces
@@ -141,10 +220,10 @@ class Chess():
             return False
         elif self.current_player == -1 and self.board[current_position[1]][current_position[0]] > 0:
             return False
-
+        
+        
         # Determine what type of piece is being moved
-        import pdb;pdb.set_trace()
-        type_of_piece = self.chess_pieces_name[abs(self.board[current_position[1]][current_position[0]])]
+        type_of_piece = self.chess_pieces_name[self.board[current_position[1]][current_position[0]] * self.current_player]
 
         # Check the places the Chess Piece can move.
         places = getattr(Chess,type_of_piece).movement(self, self.current_player, current_position)
@@ -156,19 +235,241 @@ class Chess():
         
 
     class King:
-        print('hi')
+        def __init__(self):
+            self.value = 8 # Numerical value of piece
+            self.notation = 'Q' # Chess notation
+            moves = 0
 
+        def movement(chess_game, current_player, current_position):
+
+            '''
+                Some things to think about with Rook Movement:
+                    - Rooks can only move in straight lines.
+                    - Rooks can only capture straight.
+                    - Rooks cannot leap over other pieces.
+            '''
+            
+            places_king_can_move = []
+
+            # Queen can move in all 8 directions on each diagonal.
+            # Direction 1 (+1,0)
+            if current_position[0] + 1 <= 7 and chess_game.board[current_position[1]][current_position[0]+1] == 0:
+                places_king_can_move.append((current_position[0]+1, current_position[1]))
+            elif current_position[0] + 1 <= 7 and chess_game.board[current_position[1]][current_position[0]+1]*current_player < 0:
+                places_king_can_move.append((current_position[0]+1, current_position[1]))
+            
+            # Direction 2 (-1,0)
+            if current_position[0] - 1 >= 0 and chess_game.board[current_position[1]][current_position[0]-1] == 0:
+                places_king_can_move.append((current_position[0]-1, current_position[1]))
+            elif current_position[0] - 1 >= 0 and chess_game.board[current_position[1]][current_position[0]-1]*current_player < 0:
+                places_king_can_move.append((current_position[0]-1, current_position[1]))
+
+            # Direction 3 (0,+1)
+            if current_position[1] + 1 <= 7 and chess_game.board[current_position[1]+1][current_position[0]] == 0:
+                places_king_can_move.append((current_position[0], current_position[1]+1))
+            elif current_position[1] + 1 <= 7 and chess_game.board[current_position[1]+1][current_position[0]]*current_player < 0:
+                places_king_can_move.append((current_position[0], current_position[1]+1))
+            
+            # Direction 4 (0,-1)
+            if current_position[1] - 1 >= 0 and chess_game.board[current_position[1]-1][current_position[0]] == 0:
+                places_king_can_move.append((current_position[0], current_position[1]-1))
+            elif current_position[1] - 1 >= 0 and chess_game.board[current_position[1]-1][current_position[0]]*current_player < 0:
+                places_king_can_move.append((current_position[0], current_position[1]-1))
+
+            # Direction 5 (+1,+1)
+            if current_position[1] + 1 <= 7 and current_position[0] + 1 <= 7 and chess_game.board[current_position[1]+1][current_position[0]+1] == 0:
+                places_king_can_move.append((current_position[0]+1, current_position[1]+1))
+            elif current_position[1] + 1 <= 7 and current_position[0] + 1 <= 7 and chess_game.board[current_position[1]+1][current_position[0]+1]*current_player < 0:
+                places_king_can_move.append((current_position[0]+1, current_position[1]+1))
+
+            # Direction 6 (-1,-1)
+            if current_position[1] - 1 >= 0 and current_position[0] - 1 >= 0 and chess_game.board[current_position[1]-1][current_position[0]-1] == 0:
+                places_king_can_move.append((current_position[0]-1, current_position[1]-1))
+            elif current_position[1] - 1 >= 0 and current_position[0] - 1 >= 0 and chess_game.board[current_position[1]-1][current_position[0]-1]*current_player < 0:
+                places_king_can_move.append((current_position[0]-1, current_position[1]-1))
+            
+            # Direction 7 (+1,-1)
+            if current_position[1] + 1 <= 7 and current_position[0] - 1 >= 0 and chess_game.board[current_position[1]+1][current_position[0]-1] == 0:
+                places_king_can_move.append((current_position[0]-1, current_position[1]+1))
+            elif current_position[1] + 1 <= 7 and current_position[0] - 1 >= 0 and chess_game.board[current_position[1]+1][current_position[0]-1]*current_player < 0:
+                places_king_can_move.append((current_position[0]-1, current_position[1]+1))
+
+            # Direction 8 (-1,+1)
+            if current_position[1] - 1 >= 0 and current_position[0] + 1 <= 7 and chess_game.board[current_position[1]-1][current_position[0]+1] == 0:
+                places_king_can_move.append((current_position[0]+1, current_position[1]-1))
+            elif current_position[1] - 1 >= 0 and current_position[0] + 1 <= 7 and chess_game.board[current_position[1]-1][current_position[0]+1]*current_player < 0:
+                places_king_can_move.append((current_position[0]+1, current_position[1]-1))
+            
+            # Castle Queen Side
+            if current_position in [[4,0],[4,7]] and chess_game.board[current_position[1]][current_position[0]-1] == 0 and chess_game.board[current_position[1]][current_position[0]-2] == 0 and chess_game.board[current_position[1]][current_position[0]-3] == 0:
+                places_king_can_move.append((current_position[0]-2, current_position[1]))
+
+            # Castle King Side
+            if current_position in [[4,0],[4,7]] and chess_game.board[current_position[1]][current_position[0]+1] == 0 and chess_game.board[current_position[1]][current_position[0]+2] == 0:
+                places_king_can_move.append((current_position[0]+2, current_position[1]))
+
+            return places_king_can_move
 
     class Queen:
-        print('hi')
+
+        def __init__(self):
+            self.value = 8 # Numerical value of piece
+            self.notation = 'Q' # Chess notation
+
+        def movement(chess_game, current_player, current_position):
+
+            '''
+                Some things to think about with Rook Movement:
+                    - Rooks can only move in straight lines.
+                    - Rooks can only capture straight.
+                    - Rooks cannot leap over other pieces.
+            '''
+            
+            places_queen_can_move = []
+
+            continue_searching = [True,True,True,True,True,True,True,True]
+            for squares in range(1,8):
+ 
+                # Queen can move in all 8 directions on each diagonal.
+                # Direction 1 (+,0)
+                if continue_searching[0] and current_position[0] + squares <= 7 and chess_game.board[current_position[1]][current_position[0]+squares] == 0:
+                    places_queen_can_move.append((current_position[0]+squares, current_position[1]))
+                elif continue_searching[0] and current_position[0] + squares <= 7 and chess_game.board[current_position[1]][current_position[0]+squares] < 0:
+                    places_queen_can_move.append((current_position[0]+squares, current_position[1]))
+                    continue_searching[0] = False
+                elif continue_searching[0]:
+                    continue_searching[0] = False
+                
+                # Direction 2 (-,0)
+                if continue_searching[1] and current_position[0] - squares >= 0 and chess_game.board[current_position[1]][current_position[0]-squares] == 0:
+                    places_queen_can_move.append((current_position[0]-squares, current_position[1]))
+                elif continue_searching[1] and current_position[0] - squares >= 0 and chess_game.board[current_position[1]][current_position[0]-squares]*current_player < 0:
+                    places_queen_can_move.append((current_position[0]-squares, current_position[1]))
+                    continue_searching[1] = False
+                elif continue_searching[1]:
+                    continue_searching[1] = False
+                
+                # Direction 3 (0,+)
+                if continue_searching[2] and current_position[1] + squares <= 7 and chess_game.board[current_position[1]+squares][current_position[0]] == 0:
+                    places_queen_can_move.append((current_position[0], current_position[1]+squares))
+                elif continue_searching[2] and current_position[1] + squares <= 7 and chess_game.board[current_position[1]+squares][current_position[0]]*current_player < 0:
+                    places_queen_can_move.append((current_position[0], current_position[1]+squares))
+                    continue_searching[2] = False
+                elif continue_searching[2]:
+                    continue_searching[2] = False
+                
+                # Direction 4 (0,-)
+                if continue_searching[3] and current_position[1] - squares >= 0 and chess_game.board[current_position[1]-squares][current_position[0]] == 0:
+                    places_queen_can_move.append((current_position[0], current_position[1]-squares))
+                elif continue_searching[3] and current_position[1] - squares >= 0 and chess_game.board[current_position[1]-squares][current_position[0]]*current_player < 0:
+                    places_queen_can_move.append((current_position[0], current_position[1]-squares))
+                    continue_searching[3] = False
+                elif continue_searching[3]:
+                    continue_searching[3] = False
+
+                # Direction 5 (+,+)
+                if continue_searching[4] and current_position[1] + squares <= 7 and current_position[0] + squares <= 7 and chess_game.board[current_position[1]+squares][current_position[0]+squares] == 0:
+                    places_queen_can_move.append((current_position[0]+squares, current_position[1]+squares))
+                elif continue_searching[4] and current_position[1] + squares <= 7 and current_position[0] + squares <= 7 and chess_game.board[current_position[1]+squares][current_position[0]+squares]*current_player < 0:
+                    places_queen_can_move.append((current_position[0]+squares, current_position[1]+squares))
+                    continue_searching[4] = False
+                elif continue_searching[4]:
+                    continue_searching[4] = False
+                
+                # Direction 6 (-,-)
+                if continue_searching[5] and current_position[1] - squares >= 0 and current_position[0] - squares >= 0 and chess_game.board[current_position[1]-squares][current_position[0]-squares] == 0:
+                    places_queen_can_move.append((current_position[0]-squares, current_position[1]-squares))
+                elif continue_searching[5] and current_position[1] - squares >= 0 and current_position[0] - squares >= 0 and chess_game.board[current_position[1]-squares][current_position[0]-squares]*current_player < 0:
+                    places_queen_can_move.append((current_position[0]-squares, current_position[1]-squares))
+                    continue_searching[5] = False
+                elif continue_searching[5]:
+                    continue_searching[5] = False
+                
+                # Direction 7 (+,-)
+                if continue_searching[6] and current_position[1] + squares <= 7 and current_position[0] - squares >= 0 and chess_game.board[current_position[1]+squares][current_position[0]-squares] == 0:
+                    places_queen_can_move.append((current_position[0]-squares, current_position[1]+squares))
+                elif continue_searching[6] and current_position[1] + squares <= 7 and current_position[0] - squares >= 0 and chess_game.board[current_position[1]+squares][current_position[0]-squares]*current_player < 0:
+                    places_queen_can_move.append((current_position[0]-squares, current_position[1]+squares))
+                    continue_searching[6] = False
+                elif continue_searching[6]:
+                    continue_searching[6] = False
+                
+                # Direction 8 (-,+)
+                if continue_searching[7] and current_position[1] - squares >= 0 and current_position[0] + squares <= 7 and chess_game.board[current_position[1]-squares][current_position[0]+squares] == 0:
+                    places_queen_can_move.append((current_position[0]+squares, current_position[1]-squares))
+                elif continue_searching[7] and current_position[1] - squares >= 0 and current_position[0] + squares <= 7 and chess_game.board[current_position[1]-squares][current_position[0]+squares]*current_player < 0:
+                    places_queen_can_move.append((current_position[0]+squares, current_position[1]-squares))
+                    continue_searching[7] = False
+                elif continue_searching[7]:
+                    continue_searching[7] = False
+
+
+            return places_queen_can_move
 
     class Rook:
-        print('hi')
+
+        def __init__(self):
+            self.value = 5 # Numerical value of piece
+            self.notation = 'R' # Chess notation
+
+        def movement(chess_game, current_player, current_position):
+
+            '''
+                Some things to think about with Rook Movement:
+                    - Rooks can only move in straight lines.
+                    - Rooks can only capture straight.
+                    - Rooks cannot leap over other pieces.
+            '''
+            
+            places_rook_can_move = []
+
+            continue_searching = [True,True,True,True]
+            for squares in range(1,8):
+ 
+                # Bishop can move in 4 directions on each diagonal.
+                # Direction 1 (+,0)
+                if continue_searching[0] and current_position[0] + squares <= 7 and chess_game.board[current_position[1]][current_position[0]+squares] == 0:
+                    places_rook_can_move.append((current_position[0]+squares, current_position[1]))
+                elif continue_searching[0] and current_position[0] + squares <= 7 and chess_game.board[current_position[1]][current_position[0]+squares] < 0:
+                    places_rook_can_move.append((current_position[0]+squares, current_position[1]))
+                    continue_searching[0] = False
+                elif continue_searching[0]:
+                    continue_searching[0] = False
+                
+                # Direction 2 (-,0)
+                if continue_searching[1] and current_position[0] - squares >= 0 and chess_game.board[current_position[1]][current_position[0]-squares] == 0:
+                    places_rook_can_move.append((current_position[0]-squares, current_position[1]))
+                elif continue_searching[1] and current_position[0] - squares >= 0 and chess_game.board[current_position[1]][current_position[0]-squares]*current_player < 0:
+                    places_rook_can_move.append((current_position[0]-squares, current_position[1]))
+                    continue_searching[1] = False
+                elif continue_searching[1]:
+                    continue_searching[1] = False
+                
+                # Direction 3 (0,+)
+                if continue_searching[2] and current_position[1] + squares <= 7 and chess_game.board[current_position[1]+squares][current_position[0]] == 0:
+                    places_rook_can_move.append((current_position[0], current_position[1]+squares))
+                elif continue_searching[2] and current_position[1] + squares <= 7 and chess_game.board[current_position[1]+squares][current_position[0]]*current_player < 0:
+                    places_rook_can_move.append((current_position[0], current_position[1]+squares))
+                    continue_searching[2] = False
+                elif continue_searching[2]:
+                    continue_searching[2] = False
+                
+                # Direction 4 (0,-)
+                if continue_searching[3] and current_position[1] - squares >= 0 and chess_game.board[current_position[1]-squares][current_position[0]] == 0:
+                    places_rook_can_move.append((current_position[0], current_position[1]-squares))
+                elif continue_searching[3] and current_position[1] - squares >= 0 and chess_game.board[current_position[1]-squares][current_position[0]]*current_player < 0:
+                    places_rook_can_move.append((current_position[0], current_position[1]-squares))
+                    continue_searching[3] = False
+                elif continue_searching[3]:
+                    continue_searching[3] = False
+
+
+            return places_rook_can_move
 
     class Bishop:
         def __init__(self):
-            self.value = 3 #Numerical value of piece
-            self.notation = '' #Chess notation
+            self.value = 3 # Numerical value of piece
+            self.notation = 'B' # Chess notation
 
         def movement(chess_game, current_player, current_position):
 
@@ -183,12 +484,12 @@ class Chess():
 
             continue_searching = [True,True,True,True]
             for squares in range(1,8):
-                
+ 
                 # Bishop can move in 4 directions on each diagonal.
                 # Direction 1 (+,+)
                 if continue_searching[0] and current_position[1] + squares <= 7 and current_position[0] + squares <= 7 and chess_game.board[current_position[1]+squares][current_position[0]+squares] == 0:
                     places_bishop_can_move.append((current_position[0]+squares, current_position[1]+squares))
-                elif continue_searching[0] and current_position[1] + squares <= 7 and current_position[0] + squares <= 7 and chess_game.board[current_position[1]+squares][current_position[0]+squares] < 0:
+                elif continue_searching[0] and current_position[1] + squares <= 7 and current_position[0] + squares <= 7 and chess_game.board[current_position[1]+squares][current_position[0]+squares]*current_player < 0:
                     places_bishop_can_move.append((current_position[0]+squares, current_position[1]+squares))
                     continue_searching[0] = False
                 elif continue_searching[0]:
@@ -197,7 +498,7 @@ class Chess():
                 # Direction 2 (-,-)
                 if continue_searching[1] and current_position[1] - squares >= 0 and current_position[0] - squares >= 0 and chess_game.board[current_position[1]-squares][current_position[0]-squares] == 0:
                     places_bishop_can_move.append((current_position[0]-squares, current_position[1]-squares))
-                elif continue_searching[1] and current_position[1] - squares >= 0 and current_position[0] - squares >= 0 and chess_game.board[current_position[1]-squares][current_position[0]-squares] < 0:
+                elif continue_searching[1] and current_position[1] - squares >= 0 and current_position[0] - squares >= 0 and chess_game.board[current_position[1]-squares][current_position[0]-squares]*current_player < 0:
                     places_bishop_can_move.append((current_position[0]-squares, current_position[1]-squares))
                     continue_searching[1] = False
                 elif continue_searching[1]:
@@ -206,7 +507,7 @@ class Chess():
                 # Direction 3 (+,-)
                 if continue_searching[2] and current_position[1] + squares <= 7 and current_position[0] - squares >= 0 and chess_game.board[current_position[1]+squares][current_position[0]-squares] == 0:
                     places_bishop_can_move.append((current_position[0]-squares, current_position[1]+squares))
-                elif continue_searching[2] and current_position[1] + squares <= 7 and current_position[0] - squares >= 0 and chess_game.board[current_position[1]+squares][current_position[0]-squares] < 0:
+                elif continue_searching[2] and current_position[1] + squares <= 7 and current_position[0] - squares >= 0 and chess_game.board[current_position[1]+squares][current_position[0]-squares]*current_player < 0:
                     places_bishop_can_move.append((current_position[0]-squares, current_position[1]+squares))
                     continue_searching[2] = False
                 elif continue_searching[2]:
@@ -215,7 +516,7 @@ class Chess():
                 # Direction 4 (-,+)
                 if continue_searching[3] and current_position[1] - squares >= 0 and current_position[0] + squares <= 7 and chess_game.board[current_position[1]-squares][current_position[0]+squares] == 0:
                     places_bishop_can_move.append((current_position[0]+squares, current_position[1]-squares))
-                elif continue_searching[3] and current_position[1] - squares >= 0 and current_position[0] + squares <= 7 and chess_game.board[current_position[1]-squares][current_position[0]+squares] < 0:
+                elif continue_searching[3] and current_position[1] - squares >= 0 and current_position[0] + squares <= 7 and chess_game.board[current_position[1]-squares][current_position[0]+squares]*current_player < 0:
                     places_bishop_can_move.append((current_position[0]+squares, current_position[1]-squares))
                     continue_searching[3] = False
                 elif continue_searching[3]:
@@ -226,13 +527,80 @@ class Chess():
             return places_bishop_can_move
 
     class Knight:
-        print('hi')
+        
+        def __init__(self):
+            self.value = 3 # Numerical value of piece
+            self.notation = 'N' # Chess notation
+
+        def movement(chess_game, current_player, current_position):
+
+            '''
+                Some things to think about with Rook Movement:
+                    - Rooks can only move in straight lines.
+                    - Rooks can only capture straight.
+                    - Rooks cannot leap over other pieces.
+            '''
+            
+            places_knight_can_move = []
+
+            continue_searching = [True,True,True,True,True,True,True,True] 
+            # Queen can move in all 8 directions on each diagonal.
+            # Direction 1 (+2,+1)
+            if current_position[1] + 1 <= 7 and current_position[0] + 2 <= 7 and chess_game.board[current_position[1]+1][current_position[0]+2] == 0:
+                places_knight_can_move.append((current_position[0]+2, current_position[1]+1))
+            elif current_position[1] + 1 <= 7 and current_position[0] + 2 <= 7 and chess_game.board[current_position[1]+1][current_position[0]+2] < 0:
+                places_knight_can_move.append((current_position[0]+2, current_position[1]+1))
+            
+            # Direction 2 (+2,-1)
+            if current_position[1] - 1 >= 0 and current_position[0] + 2 <= 7 and chess_game.board[current_position[1]-1][current_position[0]+2] == 0:
+                places_knight_can_move.append((current_position[0]+2, current_position[1]-1))
+            elif current_position[1] - 1 >= 0 and current_position[0] + 2 <= 7 and chess_game.board[current_position[1]-1][current_position[0]+2] < 0:
+                places_knight_can_move.append((current_position[0]+2, current_position[1]-1))
+            
+            # Direction 3 (-2,+1)
+            if current_position[1] + 1 <= 7 and current_position[0] - 2 >= 0 and chess_game.board[current_position[1]+1][current_position[0]-2] == 0:
+                places_knight_can_move.append((current_position[0]-2, current_position[1]+1))
+            elif current_position[1] + 1 <= 7 and current_position[0] - 2 >= 0 and chess_game.board[current_position[1]+1][current_position[0]-2] < 0:
+                places_knight_can_move.append((current_position[0]-2, current_position[1]+1))
+            
+            # Direction 4 (-2,-1)
+            if current_position[1] - 1 >= 0 and current_position[0] - 2 >= 0 and chess_game.board[current_position[1]-1][current_position[0]-2] == 0:
+                places_knight_can_move.append((current_position[0]-2, current_position[1]-1))
+            elif current_position[1] - 1 >= 0 and current_position[0] - 2 >= 0 and chess_game.board[current_position[1]-1][current_position[0]-2] < 0:
+                places_knight_can_move.append((current_position[0]-2, current_position[1]-1))
+
+            # Direction 5 (+1,+2)
+            if current_position[1] + 2 <= 7 and current_position[0] + 1 <= 7 and chess_game.board[current_position[1]+2][current_position[0]+1] == 0:
+                places_knight_can_move.append((current_position[0]+1, current_position[1]+2))
+            elif current_position[1] + 2 <= 7 and current_position[0] + 1 <= 7 and chess_game.board[current_position[1]+2][current_position[0]+1] < 0:
+                places_knight_can_move.append((current_position[0]+1, current_position[1]+2))
+            
+            # Direction 6 (-1,+2)
+            if current_position[1] + 2 <= 7 and current_position[0] - 1 >= 0 and chess_game.board[current_position[1]+2][current_position[0]-1] == 0:
+                places_knight_can_move.append((current_position[0]-1, current_position[1]+2))
+            elif current_position[1] + 2 <= 7 and current_position[0] - 1 >= 0 and chess_game.board[current_position[1]+2][current_position[0]-1] < 0:
+                places_knight_can_move.append((current_position[0]-1, current_position[1]+2))
+            
+            # Direction 7 (+1,-2)
+            if current_position[1] - 2 >= 0 and current_position[0] + 1 <= 7 and chess_game.board[current_position[1]-2][current_position[0]+1] == 0:
+                places_knight_can_move.append((current_position[0]+1, current_position[1]-2))
+            elif current_position[1] - 2 >= 0 and current_position[0] + 1 <= 7 and chess_game.board[current_position[1]-2][current_position[0]+1] < 0:
+                places_knight_can_move.append((current_position[0]+1, current_position[1]-2))
+            
+            # Direction 8 (-1,-2)
+            if current_position[1] - 2 >= 0 and current_position[0] - 1 >= 0 and chess_game.board[current_position[1]-2][current_position[0]-1] == 0:
+                places_knight_can_move.append((current_position[0]-1, current_position[1]-2))
+            elif current_position[1] - 2 >= 0 and current_position[0] - 1 >= 0 and chess_game.board[current_position[1]-2][current_position[0]-1] < 0:
+                places_knight_can_move.append((current_position[0]-1, current_position[1]-2))
+
+
+            return places_knight_can_move
 
     class Pawn:
 
         def __init__(self):
-            self.value = 1 #Numerical value of piece
-            self.notation = '' #Chess notation
+            self.value = 1 # Numerical value of piece
+            self.notation = '' # Chess notation
 
         def movement(chess_game, current_player, current_position):
 
@@ -258,14 +626,14 @@ class Chess():
             for squares in range(1,squares_pawn_can_move+1):
                 if (current_player == 1):
                     # If the current player is white, check the squares you can move forward and break if there is a piece in the way.
-                    if current_position[1] + squares <= 7 and chess_game.board[current_position[1]-squares][current_position[0]] == 0:
+                    if current_position[1] - squares >= 0 and chess_game.board[current_position[1]-squares][current_position[0]] == 0:
                         places_pawn_can_move.append((current_position[0], current_position[1] - squares))
                     else:
                         break
 
                 elif (current_player == -1):
                     # If the current player is white, check the squares you can move forward and break if there is a piece in the way.
-                    if current_position[1] - squares >= 0 and chess_game.board[current_position[1]+squares][current_position[0]] == 0:
+                    if current_position[1] + squares <= 7 and chess_game.board[current_position[1]+squares][current_position[0]] == 0:
                         places_pawn_can_move.append((current_position[0], current_position[1] + squares))
                     else:
                         break
@@ -289,32 +657,3 @@ class Chess():
                         places_pawn_can_move.append((current_position[0]-1,current_position[1]+1))
 
             return places_pawn_can_move
-
-
-
-
-chess = Chess()
-
-chess.move_piece('a2','a4')
-
-chess.display_game()
-
-chess.move_piece('b7','b5')
-
-chess.display_game()
-
-chess.move_piece('a4','b5')
-
-chess.display_game()
-
-chess.move_piece('c7','c6')
-
-chess.display_game()
-
-chess.move_piece('b2','b3')
-
-chess.display_game()
-
-chess.move_piece('c6','b5')
-
-chess.display_game()
