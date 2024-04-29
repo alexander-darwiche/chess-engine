@@ -2,6 +2,8 @@
 # This includes the rules and moves generation for a chess game.
 
 import math
+from copy import deepcopy
+
 
 class Chess():
     
@@ -14,6 +16,8 @@ class Chess():
         self.x_notation = ['a','b','c','d','e','f','g','h'] # the chess board is 8x8, this is the x-axis Notation/Coordinate
         self.y_notation = ['8','7','6','5','4','3','2','1'] # the chess board is 8x8, this is the x-axis Notation/Coordinate
         self.castling = [1,1,1,1] # These will be changed to 1 if the rooks or the king change position. This indicates the allowability of castling.
+        self.checked = [False, False]
+        self.check_escapes = {1: [], -1: []}
  
         self.chess_pieces = {
             'p': 1, 
@@ -35,6 +39,7 @@ class Chess():
         self.current_player = 1 # This alternates back and forth, White is first to play (1) and then Black is -1
         self.set_inital_position()
         self.display_game()
+        self.get_all_moves()
 
     
     def set_inital_position(self):
@@ -119,7 +124,7 @@ class Chess():
 
             # First check if this is a valid move
             valid_move = self.check_valid_move(current_position,next_position)
-
+            
             if (valid_move):
                 
                 # Castle Queen Side as Black
@@ -226,13 +231,87 @@ class Chess():
         type_of_piece = self.chess_pieces_name[self.board[current_position[1]][current_position[0]] * self.current_player]
 
         # Check the places the Chess Piece can move.
-        places = getattr(Chess,type_of_piece).movement(self, self.current_player, current_position)
+        valid_moves = getattr(Chess,type_of_piece).movement(self, self.current_player, current_position)
 
-        if tuple(next_position) in places:
+        # Check if the King is currently checked
+        if self.is_check(valid_moves)[1]:
+            valid_moves = [move for move in valid_moves in self.check_escapes[self.current_player]]
+        
+        # Valid moves that do not cause the king to be in check
+        valid_moves_no_check = []
+        for move in valid_moves:
+            test_game = deepcopy(self)
+            test_game.board[move[1]][move[0]] = test_game.board[current_position[1]][current_position[0]]
+            test_game.board[current_position[1]][current_position[0]] = 0
+            valid_moves_test = test_game.get_all_moves()
+            piece, test_check = test_game.is_check(valid_moves_test)
+            if not test_check or piece*test_game.current_player < 0:
+                valid_moves_no_check.append(move)
+            del test_game
+
+        if tuple(next_position) in valid_moves_no_check:
             return True
         else:
             return False
+    
+    # Get all possible moves for both players
+    def get_all_moves(self):
+        valid_moves = []
+        for y, rank in enumerate(self.board):
+            for x, piece in enumerate(rank):
+                if piece != 0:
+                    piece_name = self.chess_pieces_name[abs(piece)]
+                    player = 1 if piece > 0 else -1
+                    valid_moves = valid_moves + [i for i in getattr(Chess, piece_name).movement(self, player, [x, y])]
+        return valid_moves
+    
+    # Get all possible moves for both players
+    def is_check(self,valid_moves):
         
+        for y, rank in enumerate(self.board):
+            for x, piece in enumerate(rank):
+                if piece in [6,-6]:
+                    if (x,y) in valid_moves:
+                        return piece, True
+
+        return piece, False
+    
+    def is_checkmate(self,current_player):
+        check_escapes = []
+        for y, rank in enumerate(self.board): # Loop through rows
+            for x, piece in enumerate(rank): # Loop through columns
+                if piece*current_player > 0: # If the piece is the current player's piece
+                    piece_name = self.chess_pieces_name[abs(piece)]
+                    player = 1 if piece > 0 else -1
+                    valid_moves = [i for i in getattr(Chess, piece_name).movement(self, player, [x, y])]
+                    for move in valid_moves:
+                        test_game = deepcopy(self)
+                        test_game.board[move[1]][move[0]] = test_game.board[y][x]
+                        test_game.board[y][x] = 0
+                        valid_moves_test = test_game.get_all_moves()
+                        piece, test_check = test_game.is_check(valid_moves_test)
+                        if not test_check:
+                            check_escapes.append(move)
+                        del test_game
+                        
+        if (check_escapes == []):
+            print('CHECKMATE! ' + str("Black" if current_player == 1 else "White") + " wins!")
+            return True
+        
+        self.check_escapes[current_player] = check_escapes
+        return False
+
+    def promotable_pawns(self):
+        for y, rank in enumerate(self.board):
+            if y in [0,7]:
+                for x, piece in enumerate(rank):
+                    if piece in [1,-1]:
+                        new_piece = input('What piece would you like to change the pawn to? ')
+                        self.board[y][x] = self.chess_pieces[new_piece]
+
+        
+
+
 
     class King:
         def __init__(self):
@@ -329,12 +408,12 @@ class Chess():
 
             continue_searching = [True,True,True,True,True,True,True,True]
             for squares in range(1,8):
- 
+
                 # Queen can move in all 8 directions on each diagonal.
                 # Direction 1 (+,0)
                 if continue_searching[0] and current_position[0] + squares <= 7 and chess_game.board[current_position[1]][current_position[0]+squares] == 0:
                     places_queen_can_move.append((current_position[0]+squares, current_position[1]))
-                elif continue_searching[0] and current_position[0] + squares <= 7 and chess_game.board[current_position[1]][current_position[0]+squares] < 0:
+                elif continue_searching[0] and current_position[0] + squares <= 7 and chess_game.board[current_position[1]][current_position[0]+squares]*current_player < 0:
                     places_queen_can_move.append((current_position[0]+squares, current_position[1]))
                     continue_searching[0] = False
                 elif continue_searching[0]:
@@ -640,20 +719,20 @@ class Chess():
 
             if (current_player == 1):
                     # Capture Left-forward
-                    if current_position[0] < 7 and chess_game.board[current_position[1]-1][current_position[0]+1] < 0:
+                    if current_position[0] < 7 and current_position[1] > 0 and chess_game.board[current_position[1]-1][current_position[0]+1] < 0:
                         places_pawn_can_move.append((current_position[0]+1,current_position[1]-1))
 
-                    # Capture Right-forwad
-                    if current_position[0] > 0 and chess_game.board[current_position[1]-1][current_position[0]-1] < 0:
+                    # Capture Right-forward
+                    if current_position[0] > 0 and current_position[1] > 0 and chess_game.board[current_position[1]-1][current_position[0]-1] < 0:
                         places_pawn_can_move.append((current_position[0]-1,current_position[1]-1))
 
             elif (current_player == -1):
                     # Capture Left-forward
-                    if current_position[0] < 7 and chess_game.board[current_position[1]+1][current_position[0]+1] > 0:
+                    if current_position[0] < 7 and current_position[1] < 7 and chess_game.board[current_position[1]+1][current_position[0]+1] > 0:
                         places_pawn_can_move.append((current_position[0]+1,current_position[1]+1))
 
-                    # Capture Right-forwad
-                    if current_position[0] > 0 and chess_game.board[current_position[1]+1][current_position[0]-1] > 0:
+                    # Capture Right-forward
+                    if current_position[0] > 0 and current_position[1] < 7 and chess_game.board[current_position[1]+1][current_position[0]-1] > 0:
                         places_pawn_can_move.append((current_position[0]-1,current_position[1]+1))
 
             return places_pawn_can_move
