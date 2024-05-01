@@ -2,17 +2,17 @@ from chess import Chess
 
 chess = Chess()
 
-chess.move_piece('f2','f3')
+# chess.move_piece('f2','f3')
 
-chess.display_game()
+# chess.display_game()
 
-chess.move_piece('e7','e5')
+# chess.move_piece('e7','e5')
 
-chess.display_game()
+# chess.display_game()
 
-chess.move_piece('a2','a4')
+# chess.move_piece('a2','a4')
 
-chess.display_game()
+# chess.display_game()
 
 # chess.move_piece('c7','c6')
 
@@ -82,15 +82,14 @@ chess.display_game()
 
 # chess.display_game()
 
-chess.move_piece('b7','b6')
-chess.move_piece('a4','a5')
-chess.move_piece('h7','h6')
-chess.move_piece('a5','b6')
-chess.move_piece('h6','h5')
-chess.move_piece('b6','b7')
-chess.move_piece('h5','h4')
-# chess.move_piece('a2','a1')
-# chess.move_piece('a6','a5')
+# chess.move_piece('b7','b6')
+# chess.move_piece('a4','a5')
+# chess.move_piece('h7','h6')
+# chess.move_piece('a5','b6')
+# chess.move_piece('h6','h5')
+# chess.move_piece('b6','b7')
+# chess.move_piece('h5','h4')
+
 chess.display_game()
 
 keep_playing = True
@@ -99,9 +98,9 @@ while keep_playing:
         print('White\'s Turn')
     else:
         print("Black\'s Turn")
-    userInput = input("What piece?")
-    userInput2 = input("Where to?")
-    chess.move_piece(userInput,userInput2)
+    location_current_piece = input("What piece?")
+    location_move = input("Where to?")
+    chess.move_piece(location_current_piece,location_move)
     chess.display_game()
     chess.promotable_pawns()
     chess.display_game()
@@ -109,6 +108,13 @@ while keep_playing:
     valid_moves = chess.get_all_moves()
     
     if (chess.is_check(valid_moves)[1]):
-        if chess.is_checkmate(chess.current_player):
+        if chess.is_checkmate():
             keep_playing = False
+
+    if chess.is_stalemate():
+            keep_playing = False
+
+    if chess.is_king_bishop_draw():
+            keep_playing = False
+        
     
