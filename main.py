@@ -92,27 +92,34 @@ chess = Chess()
 
 chess.display_game()
 
+import random_ai
+
+random_agent = random_ai.random_ai()
+
 keep_playing = True
 while keep_playing:
+        
+    if chess.is_stalemate():
+        keep_playing = False
+
     if chess.current_player == 1:
         print('White\'s Turn')
+        random_agent.choose_move(chess)
+        # location_current_piece = input("What piece?")
+        # location_move = input("Where to?")
+        # chess.move_piece(location_current_piece,location_move)
     else:
         print("Black\'s Turn")
-    location_current_piece = input("What piece?")
-    location_move = input("Where to?")
-    chess.move_piece(location_current_piece,location_move)
-    chess.display_game()
+        random_agent.choose_move(chess)
+
     chess.promotable_pawns()
     chess.display_game()
-
-    valid_moves = chess.get_all_moves()
     
-    if (chess.is_check(valid_moves)[1]):
+    if (chess.is_check()[1]):
         if chess.is_checkmate():
             keep_playing = False
-
-    if chess.is_stalemate():
-            keep_playing = False
+        else: 
+            print('King is in check!')
 
     if chess.is_king_bishop_draw():
             keep_playing = False
