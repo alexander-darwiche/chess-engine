@@ -14,26 +14,18 @@ random_agent = random_ai.random_ai()
 
 class MCTS_ai:
 
-    def __init__(self, game, parent=None, parent_move = None):
+    def __init__(self, game, parent=None, parent_move = None, possible_moves = None):
         self.game = game
         self.state = self.game.board
         self.parent = parent
         self.parent_move = parent_move
         self.child = []
         self.player = self.game.current_player
-        self.possible_moves = self.game.get_all_moves_dict(for_player=self.player)
+        self.possible_moves = self.game.get_all_moves_dict(for_player=self.game.current_player)
         self.results = {}
         self.T = 0
         self.N = 0
         self.done = False
-
-
-    def choose_move(self):
-        max_val = max(self.results.values())
-        result = [key for key in self.results if self.results[key] == max_val]
-        key = random.choice(result)
-        return key
-    
     
     def getUCBscore(self):
 
@@ -50,16 +42,13 @@ class MCTS_ai:
         return (self.T / self.N) + 1 * math.sqrt(math.log(top_node.N) / self.N) 
     
     def create_child(self):
-    
         '''
-        We create one children for each possible action of the game, 
-        then we apply such action to a copy of the current node enviroment 
-        and create such child node with proper information returned from the action executed
         '''
     
         actions = []
         games = []
-
+        
+        # Loop through all possible moves and create lists of actions and the games
         for current_position in self.possible_moves:
             for j in self.possible_moves[current_position][1]:
                 next_position = self.game.x_notation[j[0]] + self.game.y_notation[j[1]]
@@ -69,52 +58,57 @@ class MCTS_ai:
                 
                     
         child = {} 
+        # Add each child with the action as the key, and the item being the new game resulting from the action
         for action, game in zip(actions, games):
             game.move_piece(action[0],action[1])
             action_key = action[0] + " to " + action[1]
-            child[action_key] = MCTS_ai(game = game, parent_move=action_key)                        
-            
+            child[action_key] = MCTS_ai(game = game, parent = self, parent_move=action_key, possible_moves = self.game.get_all_moves_dict(for_player=self.game.current_player))                        
+        
+        # Set the children of the current game    
         self.child = child
 
     def explore(self):
-        
         '''
-        The search along the tree is as follows:
-        - from the current node, recursively pick the children which maximizes the value according to the MCTS formula
-        - when a leaf is reached:
-            - if it has never been explored before, do a rollout and update its current value
-            - otherwise, expand the node creating its children, pick one child at random, do a rollout and update its value
-        - backpropagate the updated statistics up the tree until the root: update both value and visit counts
         '''
         
-        # find a leaf node by choosing nodes with max U.
-        
+        # Current will hold the current game state that we are looking at.
         current = self
 
+        # If we've already built out the children for the current game
         while current.child:
-
+                    
             child = current.child
-            max_U = max(c.getUCBscore() for c in child.values())
-            actions = [ a for a,c in child.items() if c.getUCBscore() == max_U ]
-            if len(actions) == 0:
-                print("error zero length ", max_U)                      
-            action = random.choice(actions)
-            current = child[action]
-            
+            # Get the max value UCB of all the children nodes
+            max_UCB = max(child_node.getUCBscore() for child_node in child.values())
+
+            # Get the specific children that have this max UCB values
+            moves = [ move for move,child_node in child.items() if child_node.getUCBscore() == max_UCB ]
+
+            # Randomly select one of the children that has the highest UCB of the current children
+            move = random.choice(moves)
+
+            # Set current to 
+            current = child[move]
+            # After this, we loop back to the top and see if this child node has children.
+            # If it does have children, again pick the one with the highest UCB.
+            # If it does not have children, go deeper into the tree and create children for it.
+
         # play a random game, or expand if needed          
         if current.N < 1:
+            # Update the win/lose/draw values
             current.T = current.T + current.rollout()
         else:
+            # If the node has been visited, create children node for it. This is all possible moves from the current posisiton.
             current.create_child()
-            if current.child:
-                try:
-                    current_key = random.choice([a for a in current.child.keys()])
-                    current = current.child[current_key]
-                                            
-                except:
-                    import pdb;pdb.set_trace()
-            current.T = current.T + current.rollout()
 
+            # If the current node has children, randomly select one of them.
+            if current.child:
+                current_key = random.choice([move for move in current.child.keys()])
+                current = current.child[current_key]
+
+            # Perform a rollout for the random child
+            current.T = current.T + current.rollout()
+        # Make sure visits are updated appopriately
         current.N += 1      
                 
         # update statistics and backpropagate
@@ -127,13 +121,9 @@ class MCTS_ai:
             parent.T = parent.T + current.T
 
     def rollout(self):
+        '''
+        '''
         
-        '''
-        The rollout is a random play from a copy of the environment of the current node using random moves.
-        This will give us a value for the current node.
-        Taken alone, this value is quite random, but, the more rollouts we will do for such node,
-        the more accurate the average of the value for such node will be. This is at the core of the MCTS algorithm.
-        '''
         new_game = deepcopy(self.game)     
         
         result = 0
@@ -143,17 +133,17 @@ class MCTS_ai:
             # Check if stalemate
             if new_game.is_stalemate():
                 keep_playing = False
-                result = .5
+                result = 0
 
             loser_king, checked = new_game.is_check()
             if (checked):
                 if new_game.is_checkmate():
                     keep_playing = False
-                    result = 1 if loser_king*self.player < 0 else 0
+                    result = 1 if loser_king == -6 else -1
 
             if new_game.is_king_bishop_draw():
                     keep_playing = False
-                    result = .5
+                    result = 0
 
             if keep_playing:    
                 if new_game.current_player == 1:
@@ -162,70 +152,82 @@ class MCTS_ai:
                     random_agent.choose_move(new_game)
 
                 new_game.promotable_pawns()  
-        #print(result)  
+
         return result
     
     def next(self):
-        
-        ''' 
-        Once we have done enough search in the tree, the values contained in it should be statistically accurate.
-        We will at some point then ask for the next action to play from the current node, and this is what this function does.
-        There may be different ways on how to choose such action, in this implementation the strategy is as follows:
-        - pick at random one of the node which has the maximum visit count, as this means that it will have a good value anyway.
-        '''
 
-        if self.done:
-            raise ValueError("game has ended")
+        # Find the node that's been visited the most
+        max_N = max(node.N for node in self.child.values())
 
-        if not self.child:
-            raise ValueError('no children found and game hasn\'t ended')
+        # Find the children that have been visited the most times
+        max_children = [ c for a,c in self.child.items() if c.N == max_N ]
         
-        child = self.child
-        
-        max_N = max(node.N for node in child.values())
-       
-        max_children = [ c for a,c in child.items() if c.N == max_N ]
-        
-        if len(max_children) == 0:
-            print("error zero length ", max_N) 
-            
+        # Return a random child that's been visited the most times
         max_child = random.choice(max_children)
         
+        # Return this new child and the value that led to this child
         return max_child, max_child.parent_move
 
+    def play(self, iterations):
 
-chess = Chess()
-mcts_ai = MCTS_ai(game = chess)
-mcts_ai.game.display_game()
+        for i in range(iterations):
+            self.explore()
 
-while not mcts_ai.done:
+        child, move = self.next()
+        return child, move
 
-    print('White\'s Turn')
+
+
+# chess = Chess()
+# mcts_ai = MCTS_ai(game = chess)
+# mcts_ai.game.display_game()
+
+
+
+# while not mcts_ai.done:
     
-    for i in range(25):
-        mcts_ai.explore()
+#     # Check if stalemate
+#     if mcts_ai.game.is_stalemate():
+#         mcts_ai.done = True
+#         break
+
+#     loser_king, checked = mcts_ai.game.is_check()
+#     if (checked):
+#         if mcts_ai.game.is_checkmate():
+#             mcts_ai.done = True
+#             break
+
+#     if mcts_ai.game.is_king_bishop_draw():
+#             mcts_ai.done = True
+#             break
+
+#     mcts_ai.game.promotable_pawns()  
     
-    mcts_ai, action = mcts_ai.next()
-    print(action)
-    # import pdb;pdb.set_trace()
-    
-    # mcts_ai.game.move_piece(action.split()[0],action.split()[2])
-    mcts_ai.game.display_game()
+#     if mcts_ai.game.current_player == 1:
+#         print('White\'s Turn')
 
-    # print('Black\'s Turn')
-    # location_current_piece = input("What piece?")
-    # location_move = input("Where to?")
-    # mcts_ai.game.move_piece(location_current_piece,location_move)
-    # #mcts_ai, action = mcts_ai.next()
-    # print(action)
-    # mcts_ai.game.display_game()
+#         for i in range(25):
+#             mcts_ai.explore()
+                
+#         mcts_ai, action = mcts_ai.next()
+#         chess = deepcopy(mcts_ai.game)
+#         print(action)
+        
+#         mcts_ai.game.display_game()
+#     else:
+#         print('Black\'s Turn')
+#         location_current_piece = input("What piece?")
+#         location_move = input("Where to?")
+#         mcts_ai.game.move_piece(location_current_piece,location_move)
 
-    if mcts_ai.game.is_checkmate():
-        mcts_ai.done = True
-        import pdb;pdb.set_trace()
+#         print(action)
+#         mcts_ai.game.display_game()
 
 
 
 
-import pdb;pdb.set_trace()
+
+
+# import pdb;pdb.set_trace()
 

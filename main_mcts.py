@@ -1,11 +1,10 @@
 from chess import Chess
 import random_ai
+import mcts_ai
 
 # Create a chess game
 chess = Chess()
 
-# Instantiate in a random agent
-random_agent = random_ai.random_ai()
 
 # Set a parameter to True for keep playing, continue until draw or checkmate.
 keep_playing = True
@@ -25,7 +24,14 @@ while keep_playing:
         chess.move_piece(location_current_piece,location_move)
     else:
         print("Black\'s Turn")
-        random_agent.choose_move(chess)
+
+        # Instantiate in a random agent
+        mcts_agent = mcts_ai.MCTS_ai(game = chess)
+        child,move = mcts_agent.play(5)
+        location_current_piece = move.split()[0]
+        location_move = move.split()[2]
+        print(move)
+        chess.move_piece(location_current_piece,location_move)
 
     chess.promotable_pawns()
     chess.display_game()

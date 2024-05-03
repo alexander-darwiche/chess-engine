@@ -11,6 +11,7 @@ class random_ai:
 
     def choose_move(self, chess_game):
         all_moves = chess_game.get_all_moves_dict(for_player = chess_game.current_player)
+        #import pdb;pdb.set_trace()
         key = random.choice(list(all_moves.keys()))
 
         value = random.randint(0,len(all_moves[key][1])-1)
