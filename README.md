@@ -20,21 +20,21 @@ Step 2: Next, you want to download the required libraries to ensure the program 
 To do this, type the following:
 
 ```
-> Poetry update
-> Poetry shell
+> poetry update
+> poetry shell
 ```
 
 Step 3: Now you are within the virtual environment needed to run the code. Next, you can select to play either of the chess bots by typing:
 
 
 ```
-> Poetry run python main.py
+> poetry run python main.py
 ```
 
 or 
 
 ```
-> Poetry run python main_mcts.py
+> poetry run python main_mcts.py
 ```
 
 Step 4: Now you can play against the AI. You will be White pieces and the AI will be Black pieces in both implementations.
