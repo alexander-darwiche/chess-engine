@@ -111,14 +111,23 @@ class MCTS_ai:
         # Make sure visits are updated appopriately
         current.N += 1      
                 
-        # update statistics and backpropagate
+        # update statistics and back propagate
         parent = current
-            
+        
+        # This can be tricky, update the parent nodes based on their current_player.
         while parent.parent:
-            
             parent = parent.parent
             parent.N += 1
-            parent.T = parent.T + current.T
+
+            # This achieves the 2 player game back propogation
+            if current.T == 1:
+                back_prop_value = 0
+            elif current.T == 0:
+                back_prop_value = 1
+            else:
+                back_prop_value = .5
+
+            parent.T = parent.T + back_prop_value
 
     def rollout(self):
         '''
@@ -133,17 +142,17 @@ class MCTS_ai:
             # Check if stalemate
             if new_game.is_stalemate():
                 keep_playing = False
-                result = 0
+                result = .5
 
             loser_king, checked = new_game.is_check()
             if (checked):
                 if new_game.is_checkmate():
                     keep_playing = False
-                    result = 1 if loser_king == -6 else -1
+                    result = 1 if loser_king*self.game.current_player == -6 else 0
 
             if new_game.is_king_bishop_draw():
                     keep_playing = False
-                    result = 0
+                    result = .5
 
             if keep_playing:    
                 if new_game.current_player == 1:
@@ -152,6 +161,12 @@ class MCTS_ai:
                     random_agent.choose_move(new_game)
 
                 new_game.promotable_pawns()  
+        
+        # This achieves the 2 player game back propogation
+        if result == 1 and self.game.current_player == -1:
+            result = 0
+        elif result == 0 and self.game.current_player == -1:
+            result = 1
 
         return result
     
@@ -175,59 +190,16 @@ class MCTS_ai:
             self.explore()
 
         child, move = self.next()
-        return child, move
-
-
-
-# chess = Chess()
-# mcts_ai = MCTS_ai(game = chess)
-# mcts_ai.game.display_game()
-
-
-
-# while not mcts_ai.done:
-    
-#     # Check if stalemate
-#     if mcts_ai.game.is_stalemate():
-#         mcts_ai.done = True
-#         break
-
-#     loser_king, checked = mcts_ai.game.is_check()
-#     if (checked):
-#         if mcts_ai.game.is_checkmate():
-#             mcts_ai.done = True
-#             break
-
-#     if mcts_ai.game.is_king_bishop_draw():
-#             mcts_ai.done = True
-#             break
-
-#     mcts_ai.game.promotable_pawns()  
-    
-#     if mcts_ai.game.current_player == 1:
-#         print('White\'s Turn')
-
-#         for i in range(25):
-#             mcts_ai.explore()
-                
-#         mcts_ai, action = mcts_ai.next()
-#         chess = deepcopy(mcts_ai.game)
-#         print(action)
         
-#         mcts_ai.game.display_game()
-#     else:
-#         print('Black\'s Turn')
-#         location_current_piece = input("What piece?")
-#         location_move = input("Where to?")
-#         mcts_ai.game.move_piece(location_current_piece,location_move)
+        # stack = [self]
+        # while stack:
+        #     for i in stack:
+        #         key = i.parent_move if i.parent_move is not None else "Root"
+        #         stack.remove(i)
+        #         print("Move: " + key + " -- wins:" + str(i.T) + " total: " + str(i.N))
+        #         if i.child != []:
+        #             for key,item in i.child.items():
+        #                 stack.append(item)
 
-#         print(action)
-#         mcts_ai.game.display_game()
-
-
-
-
-
-
-# import pdb;pdb.set_trace()
-
+                
+        return child, move

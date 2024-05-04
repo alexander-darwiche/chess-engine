@@ -12,6 +12,8 @@ class Chess():
     def __init__(self):
         '''
             This is the initialization of the Chess Game. Will hold all base assumptions for a chess match.
+
+            @param self - the chess class
         '''
         self.x_notation = ['a','b','c','d','e','f','g','h'] # the chess board is 8x8, this is the x-axis Notation/Coordinate
         self.y_notation = ['8','7','6','5','4','3','2','1'] # the chess board is 8x8, this is the x-axis Notation/Coordinate
@@ -38,12 +40,12 @@ class Chess():
         
         self.current_player = 1 # This alternates back and forth, White is first to play (1) and then Black is -1
         self.set_inital_position()
-        #self.display_game()
-        #self.get_all_moves()
  
     def set_inital_position(self):
         '''
             This method creates a board with pieces on either side.
+
+            @param self - the chess class
         '''
         self.board = [[0, 0, 0, 0, 0, 0, 0, 0],
                       [0, 0, 0, 0, 0, 0, 0, 0],
@@ -75,17 +77,14 @@ class Chess():
             
             current_rank += 1  
 
-        # self.board = [[3, 0, 0, 0, 0, 0, 0, 0],
-        #             [0, 0, 0, 0, 0, 0, 0, 0],
-        #             [-6, 0, 0, 0, 0, 0, 0, 0],
-        #             [0, 0, 0, 0, 0, 0, 0, 0],
-        #             [0, 0, 0, 0, 0, 0, 0, 0],
-        #             [0, 0, 0, 0, 0, 0, 0, 0],
-        #             [0, 0, 0, 0, 0, 0, 0, 0],
-        #             [0, 0, 0, 0, 6, 0, 0, 0]]
 
     def display_game(self):
-        
+        '''
+            This script displays the chess match in its current state, converting numbers to letters for each player. Uppercase letters are 
+            white pieces, while lowercase letters are black pieces.
+
+            @param self - the chess class
+        '''
 
         print("+----------------------------+")
         print("| Current State of the Game: |")
@@ -107,6 +106,14 @@ class Chess():
         print("White Side")
     
     def move_piece(self,current_position_notation, next_position_notation):
+        '''
+            This function moves the piece from @current_position_notation to @next_position_notation or
+            doesn't if the move is invalid.
+
+            @param self - the chess class
+            @param current_position_notation - The current location of the piece you want to move in "a1" format
+            @param next_position_notation - The location you would like to move the piece in "a1" format
+        '''
         
         # Read in notation
         current_position_x = list(current_position_notation)[0].lower()
@@ -230,6 +237,15 @@ class Chess():
                 pass
      
     def check_valid_move(self,current_position,next_position):
+        '''
+            This function checks if the proposed move is valid or not.
+        
+            @param self - the chess class
+            @param current_position_notation - The current location of the piece you want to move in "a1" format
+            @param next_position_notation - The location you would like to move the piece in "a1" format
+
+            @return - True if valid, false is invalid move
+        '''
 
         # Ensure white player is moving white pieces, and black player is moving black pieces
         if self.current_player == 1 and self.board[current_position[1]][current_position[0]] < 0:
@@ -260,6 +276,16 @@ class Chess():
     
     # Get all possible moves for both players
     def get_all_moves_dict(self, for_piece = None, for_player: int = None):
+        '''
+            This function returns all the moves that are playable by various subsections of the board. You can call this function
+            to down select to moves for a specific player or even for a specific piece.
+        
+            @param self - the chess class
+            @param for_piece - the piece you would like to find the moves for
+            @param for_player - the player you would like to find the move for
+
+            @return - dictionary of all the moves that are possible, with the chess notation location ("a1" format) as the key, and the moves as the items.
+        '''
 
         if for_piece is not None:
             for_player = 1 if for_piece > 0 else -1
@@ -296,6 +322,14 @@ class Chess():
     
     # Get all possible moves for both players
     def is_check(self):
+        '''
+            This function returns if the current player's king is in check.
+        
+            @param self - the chess class
+
+            @return - Returns the piece that is in check
+            @return - True if self.current_player's King is in check
+        '''
 
         valid_moves = []
         for y, rank in enumerate(self.board):
@@ -314,6 +348,13 @@ class Chess():
         return piece, False
     
     def is_checkmate(self):
+        '''
+            This function returns if the current player's king is in checkmate.
+        
+            @param self - the chess class
+
+            @return - True if self.current_player's King is in check
+        '''
         check_escapes = {}
         for y, rank in enumerate(self.board): # Loop through rows
             for x, piece in enumerate(rank): # Loop through columns
@@ -335,6 +376,11 @@ class Chess():
         return False
 
     def promotable_pawns(self):
+        '''
+            This function is called to update any pawns on the back rank to a higher order piece.
+        
+            @param self - the chess class
+        '''
         for y, rank in enumerate(self.board):
             if y in [0,7]:
                 for x, piece in enumerate(rank):
@@ -344,6 +390,13 @@ class Chess():
 
     # This looks for a board where its kings and bishops on the same color, automatic draw
     def is_king_bishop_draw(self):
+        '''
+            This function returns if the current position is a draw.
+        
+            @param self - the chess class
+
+            @return - True if the position is a draw, false otherwise.
+        '''
         pieces = {}
         for y, rank in enumerate(self.board):
             for x, piece in enumerate(rank):
@@ -362,12 +415,29 @@ class Chess():
         return False
 
     def is_stalemate(self):
+        '''
+            This function returns if the current position is a stalemate.
+        
+            @param self - the chess class
+
+            @return - True if the position is a stalemate, false otherwise.
+        '''
         valid_moves = self.get_all_moves_dict(for_player=self.current_player)
         if len(list(valid_moves.keys())) == 0:
             #print('Stalemate! ' + str("It's a draw!"))
             return True
         
     def check_if_moves_into_mate(self,valid_moves,x,y):
+        '''
+            This function returns a list of moves, from all possible moves, that don't put a player's king in check.
+        
+            @param self - the chess class
+            @param valid_moves - all moves a player can make, regardless of if they put their own king in check
+            @param x - current x-axis location of the piece in question
+            @param y - current y-axis locaiton of the piece in question
+
+            @return valid_moves_no_check - subset of valid moves that do not put the current player's king in check.
+        '''
         valid_moves_no_check = []
         for move in valid_moves:
             test_game = deepcopy(self)
@@ -380,6 +450,7 @@ class Chess():
         return valid_moves_no_check
 
     class King:
+
         def __init__(self):
             self.value = 8 # Numerical value of piece
             self.notation = 'Q' # Chess notation
@@ -388,10 +459,8 @@ class Chess():
         def movement(chess_game, current_player, current_position):
 
             '''
-                Some things to think about with Rook Movement:
-                    - Rooks can only move in straight lines.
-                    - Rooks can only capture straight.
-                    - Rooks cannot leap over other pieces.
+                Some things to think about with King Movement:
+                    - King 1 square in each direction, unless it is castling
             '''
             
             places_king_can_move = []
@@ -476,10 +545,10 @@ class Chess():
         def movement(chess_game, current_player, current_position):
 
             '''
-                Some things to think about with Rook Movement:
-                    - Rooks can only move in straight lines.
-                    - Rooks can only capture straight.
-                    - Rooks cannot leap over other pieces.
+                Some things to think about with Queen Movement:
+                    - Queen can only move in straight lines.
+                    - Queen can move vertically, horizontally, or diagonally as far as they are able.
+                    - Queen cannot leap over other pieces.
             '''
             
             places_queen_can_move = []
@@ -631,7 +700,7 @@ class Chess():
         def movement(chess_game, current_player, current_position):
 
             '''
-                Some things to think about with Pawn Movement:
+                Some things to think about with Bishop Movement:
                     - Bishops can only move diagonally.
                     - Bishops can only capture diagonally.
                     - Bishops cannot leap over other pieces.
@@ -692,10 +761,10 @@ class Chess():
         def movement(chess_game, current_player, current_position):
 
             '''
-                Some things to think about with Rook Movement:
-                    - Rooks can only move in straight lines.
-                    - Rooks can only capture straight.
-                    - Rooks cannot leap over other pieces.
+                Some things to think about with Knight Movement:
+                    - Knight can only move in L's. Essentially 2 squares in a direction, and 1 square in the perpendicular direction.
+                    - Knight can capture in their movement.
+                    - Knight can leap over other pieces.
             '''
             
             places_knight_can_move = []
