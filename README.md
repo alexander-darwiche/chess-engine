@@ -1,4 +1,4 @@
-# Monte-Carlo Tree Search Implementation in Python for Chess
+# Monte-Carlo Tree Search in Python for Chess
 [![Visits Badge](https://badges.pufler.dev/visits/alexander-darwiche/chess-engine)](#)
 
 
