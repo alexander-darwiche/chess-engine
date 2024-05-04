@@ -10,7 +10,7 @@ Poetry Package Manager installed. To do this, navigate to: https://python-poetry
 <br>
 
 # Getting started
-**(PVP)** <br>
+<br>
 Step 1: First step is to navigate to the folder containing the repository through the command prompt.
 
 ```
