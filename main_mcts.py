@@ -27,7 +27,7 @@ while keep_playing:
 
         # Instantiate in a random agent
         mcts_agent = mcts_ai.MCTS_ai(game = chess)
-        child,move = mcts_agent.play(5)
+        child,move = mcts_agent.play(10)
         location_current_piece = move.split()[0]
         location_move = move.split()[2]
         print(move)

@@ -2,10 +2,7 @@
 
 import math
 import random
-from chess import Chess
 from copy import deepcopy
-import numpy as np
-import matplotlib.pyplot as plt
 
 
 
@@ -16,59 +13,73 @@ class MCTS_ai:
 
     def __init__(self, game, parent=None, parent_move = None, possible_moves = None):
         self.game = game
-        self.state = self.game.board
         self.parent = parent
         self.parent_move = parent_move
         self.child = []
         self.player = self.game.current_player
         self.possible_moves = self.game.get_all_moves_dict(for_player=self.game.current_player)
-        self.results = {}
         self.T = 0
         self.N = 0
-        self.done = False
     
     def getUCBscore(self):
+        '''
+            This function returns the Upper Confidence Bound for a specific node
 
-        # Unexplored nodes have maximum values so we favour exploration
+            @param self - current node, this node includes the number of times visited (N) and the total value (T) for the Node
+
+            @return - The UCB given the N and T of the node
+        '''
+
         if self.N == 0:
             return float('inf')
 
-        # We need the parent node of the current node 
         top_node = self
         if top_node.parent:
             top_node = top_node.parent
-            
-        # We use one of the possible MCTS formula for calculating the node value
+        
+        # Calculate the UCB for the node
         return (self.T / self.N) + 1 * math.sqrt(math.log(top_node.N) / self.N) 
     
     def create_child(self):
         '''
+            This function creates the children nodes for a parent node. These children 
+            are all the possible moves that can be made from the current game state.
+
+            @param self - Current/parent node.
         '''
     
-        actions = []
+        moves = []
         games = []
         
         # Loop through all possible moves and create lists of actions and the games
         for current_position in self.possible_moves:
             for j in self.possible_moves[current_position][1]:
                 next_position = self.game.x_notation[j[0]] + self.game.y_notation[j[1]]
-                actions.append([current_position,next_position])
+                moves.append([current_position,next_position])
                 new_game = deepcopy(self.game)
                 games.append(new_game)
                 
                     
         child = {} 
         # Add each child with the action as the key, and the item being the new game resulting from the action
-        for action, game in zip(actions, games):
-            game.move_piece(action[0],action[1])
-            action_key = action[0] + " to " + action[1]
-            child[action_key] = MCTS_ai(game = game, parent = self, parent_move=action_key, possible_moves = self.game.get_all_moves_dict(for_player=self.game.current_player))                        
+        for move, game in zip(moves, games):
+            game.move_piece(move[0],move[1])
+            move_key = move[0] + " to " + move[1]
+            child[move_key] = MCTS_ai(game = game, parent = self, parent_move=move_key, possible_moves = self.game.get_all_moves_dict(for_player=self.game.current_player))                        
         
         # Set the children of the current game    
         self.child = child
 
     def explore(self):
         '''
+            This is the main function of the Monte-Carlo Tree Search. Essentially you start with 
+            a Node. If that nodes has children, then you pick the node with the highest UCB and you
+            "explore" that node. If that node then has no children and has not been visited before,
+            then you do a random playout simulation (rollout). If that node has been visited before,
+            then you instead create all that nodes children. Each time running through this function 
+            is a "simulation". Ideally this could be run thousands of times at each decision point.
+
+            @param self - Current/parent node.
         '''
         
         # Current will hold the current game state that we are looking at.
@@ -129,8 +140,15 @@ class MCTS_ai:
 
             parent.T = parent.T + back_prop_value
 
+
     def rollout(self):
         '''
+            This a random playout of a game. From a given game state, this function continues 
+            running 2 random agents until the game reaches a complete state.
+
+            @param self - Current/parent node.
+
+            @return result - The result of the game. If White or Black wins it is a 1 (depending on the node's player) and if its a draw, then its a .5
         '''
         
         new_game = deepcopy(self.game)     
@@ -171,6 +189,19 @@ class MCTS_ai:
         return result
     
     def next(self):
+        '''
+            This function returns the action that is taken by the MCTS algorithm
+            after the simulations have been run. This navigates through the tree
+            and takes us down the path that has been explored the most by the algorithm
+            to that date. The reason it goes down the most populated path, is because 
+            we want to explore the path that is most well understood first, and second
+            we have down selected the highest UCB's to explore this path most often anyways.
+
+            @param self - Current/parent node.
+
+            @return max_child - Child with the most visits.
+            @return max_child.parent_move - The move that led to this game state.
+        '''
 
         # Find the node that's been visited the most
         max_N = max(node.N for node in self.child.values())
@@ -185,21 +216,34 @@ class MCTS_ai:
         return max_child, max_child.parent_move
 
     def play(self, iterations):
+        '''
+            This is called to run Monte-Carlo Tree Search on the a given game state. This
+            will run as many iterations as are specified by the user, and then return the 
+            recommended move to take.
+
+            @param self - Current/parent node.
+
+            @return child - Child with the most visits.
+            @return move - The move that led to this game state.
+        
+        '''
 
         for i in range(iterations):
             self.explore()
 
         child, move = self.next()
         
-        # stack = [self]
-        # while stack:
-        #     for i in stack:
-        #         key = i.parent_move if i.parent_move is not None else "Root"
-        #         stack.remove(i)
-        #         print("Move: " + key + " -- wins:" + str(i.T) + " total: " + str(i.N))
-        #         if i.child != []:
-        #             for key,item in i.child.items():
-        #                 stack.append(item)
-
+        # self.mcts_viz_helper()
                 
         return child, move
+    
+    def mcts_viz_helper(self):
+        stack = [self]
+        while stack:
+            for i in stack:
+                key = i.parent_move if i.parent_move is not None else "Root"
+                stack.remove(i)
+                print("Move: " + key + " -- wins:" + str(i.T) + " total: " + str(i.N))
+                if i.child != []:
+                    for key,item in i.child.items():
+                        stack.append(item)
