@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About Methods - Chess Engine</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg: #020617;
+            --panel: #0b1220;
+            --text: #e5e7eb;
+            --muted: #94a3b8;
+            --line: rgba(148, 163, 184, 0.24);
+            --accent: #93c5fd;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Inter, Segoe UI, Roboto, Arial, sans-serif;
+            background: radial-gradient(circle at top, #111827, var(--bg));
+            color: var(--text);
+        }
+        .container {
+            width: min(1040px, 94vw);
+            margin: 28px auto;
+            background: rgba(11, 18, 32, 0.94);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 20px;
+        }
+        h1, h2 { margin: 0 0 10px; }
+        h1 { font-size: 1.55rem; }
+        h2 { margin-top: 22px; font-size: 1.1rem; color: #bfdbfe; }
+        p, li { color: #dbe5f3; line-height: 1.45; }
+        .muted { color: var(--muted); }
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        .back-link {
+            color: var(--accent);
+            text-decoration: none;
+            border: 1px solid rgba(147, 197, 253, 0.5);
+            border-radius: 999px;
+            padding: 6px 10px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            background: rgba(30, 41, 59, 0.42);
+        }
+        .back-link:hover {
+            color: #dbeafe;
+            border-color: rgba(191, 219, 254, 0.9);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+            font-size: 0.92rem;
+        }
+        th, td {
+            text-align: left;
+            vertical-align: top;
+            border-bottom: 1px solid var(--line);
+            padding: 10px 8px;
+        }
+        th {
+            color: #bfdbfe;
+            font-size: 0.84rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+        code {
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid rgba(148, 163, 184, 0.26);
+            border-radius: 6px;
+            padding: 1px 5px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <div class="topbar">
+            <h1>About this project’s methods</h1>
+            <a class="back-link" href="/index.html">Back to board</a>
+        </div>
+        <p class="muted">
+            This page summarizes the major algorithms and implementation methods used in this chess project.
+        </p>
+
+        <h2>Engine/search methods</h2>
+        <table>
+            <thead>
+                <tr><th>Method</th><th>What it does</th><th>Where used</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Iterative deepening</td>
+                    <td>Searches depth 1..N and keeps the best move found so far if time runs out.</td>
+                    <td><code>mcts_ai.py</code>, <code>MCTS_ai.play</code></td>
+                </tr>
+                <tr>
+                    <td>Alpha-beta pruning</td>
+                    <td>Cuts branches that cannot influence the final decision to search deeper with less work.</td>
+                    <td><code>mcts_ai.py</code>, <code>_alphabeta</code></td>
+                </tr>
+                <tr>
+                    <td>Transposition table</td>
+                    <td>Caches previously evaluated positions in the current search to avoid recomputation.</td>
+                    <td><code>mcts_ai.py</code>, <code>self.transposition</code></td>
+                </tr>
+                <tr>
+                    <td>Quiescence search</td>
+                    <td>Extends tactical positions (captures/check pressure) past nominal depth to reduce horizon effects.</td>
+                    <td><code>mcts_ai.py</code>, <code>_quiescence</code></td>
+                </tr>
+                <tr>
+                    <td>Null-move pruning</td>
+                    <td>Tries a “pass” move in safe positions; if still good, prunes aggressively.</td>
+                    <td><code>mcts_ai.py</code>, <code>_alphabeta</code></td>
+                </tr>
+                <tr>
+                    <td>Late move reductions (LMR)</td>
+                    <td>Searches low-priority quiet moves at reduced depth, then re-searches only if promising.</td>
+                    <td><code>mcts_ai.py</code>, <code>_alphabeta</code></td>
+                </tr>
+                <tr>
+                    <td>Principal variation style windows</td>
+                    <td>Searches first move wide, later moves narrow first; re-searches if needed.</td>
+                    <td><code>mcts_ai.py</code>, <code>_search_root</code></td>
+                </tr>
+                <tr>
+                    <td>Aspiration windows</td>
+                    <td>Starts each deeper iteration near previous score to speed convergence.</td>
+                    <td><code>mcts_ai.py</code>, <code>play</code></td>
+                </tr>
+                <tr>
+                    <td>Move ordering (history + killer + tactical bonuses)</td>
+                    <td>Sorts stronger candidate moves first to improve pruning quality.</td>
+                    <td><code>mcts_ai.py</code>, <code>_order_moves</code></td>
+                </tr>
+                <tr>
+                    <td>Opening book</td>
+                    <td>Uses predefined common opening lines to play strong opening moves quickly.</td>
+                    <td><code>mcts_ai.py</code>, <code>OPENING_BOOK</code></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>Evaluation methods</h2>
+        <ul>
+            <li><strong>Material values</strong> (pawn/knight/bishop/rook/queen/king baseline).</li>
+            <li><strong>Piece-square tables</strong> for positional bonuses by square.</li>
+            <li><strong>Center control bonus</strong> based on distance to center.</li>
+            <li><strong>Pawn structure penalties</strong> (isolated/doubled tendencies).</li>
+            <li><strong>Development and king safety</strong> heuristics.</li>
+            <li><strong>Pseudo-mobility</strong> heuristic for move activity.</li>
+        </ul>
+
+        <h2>Game-state correctness methods</h2>
+        <ul>
+            <li>Check/checkmate and stalemate resolution logic.</li>
+            <li>Threefold repetition detection from tracked position history.</li>
+            <li>50-move rule tracking via halfmove clock.</li>
+            <li>Insufficient material handling for specific draw cases.</li>
+            <li>Post-move legality filtering through the chess rules engine.</li>
+        </ul>
+
+        <h2>Bot modes and control methods</h2>
+        <table>
+            <thead>
+                <tr><th>Mode</th><th>Method</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>random</code></td><td>Uniform random legal move selection.</td></tr>
+                <tr><td><code>mcts_fast</code></td><td>Primary iterative deepening alpha-beta stack tuned for responsiveness.</td></tr>
+                <tr><td><code>mcts_strong</code></td><td>Same stack with stronger/slower multipliers.</td></tr>
+                <tr><td><code>mcts_ultra</code></td><td>Largest local search budget for deepest practical analysis.</td></tr>
+            </tbody>
+        </table>
+
+        <h2>Coach chatbot methods</h2>
+        <ul>
+            <li><strong>Strands-style chat loop</strong> with stored conversation history per session.</li>
+            <li><strong>Tool snapshot extraction</strong> before each answer:
+                opening guess, candidate checks, candidate captures, detected pins, and pressure map.</li>
+            <li><strong>Local LLM generation</strong> through Ollama when available.</li>
+            <li><strong>Graceful fallback reasoning</strong> from tool results if model calls fail/timeout.</li>
+        </ul>
+
+        <h2>Frontend visualization methods</h2>
+        <ul>
+            <li>Interactive board with drag/drop and click-to-move.</li>
+            <li>Live search-tree simulation with depth bands, principal-path highlighting, and activity stats.</li>
+            <li>Collapsible right-panel UI sections for status/controls/tree/moves.</li>
+            <li>Chat-style coach UI with quick prompts.</li>
+        </ul>
+    </main>
+</body>
+</html>

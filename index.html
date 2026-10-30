@@ -1,0 +1,1724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Engine</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg: #020617;
+            --panel: #0b1220;
+            --text: #e5e7eb;
+            --muted: #9ca3af;
+            --accent: #22c55e;
+            --danger: #ef4444;
+            --light-square: #f0d9b5;
+            --dark-square: #b58863;
+            --selected: #60a5fa;
+            --target: #22c55e;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: Inter, Segoe UI, Roboto, Arial, sans-serif;
+            background: radial-gradient(circle at top, #111827, var(--bg));
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .layout {
+            width: min(1320px, 94vw);
+            margin: 24px auto;
+            display: grid;
+            grid-template-columns: minmax(240px, 300px) minmax(320px, 560px) minmax(280px, 360px);
+            gap: 20px;
+            align-items: start;
+        }
+
+        .board-panel, .info-panel, .coach-panel {
+            background: rgba(11, 18, 32, 0.92);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 12px;
+            padding: 16px;
+        }
+        .info-panel {
+            display: grid;
+            gap: 10px;
+        }
+        .coach-panel {
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .title {
+            margin: 0 0 8px;
+            font-size: 1.35rem;
+            font-weight: 700;
+        }
+        .title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+        .about-link {
+            color: #93c5fd;
+            text-decoration: none;
+            font-size: 0.82rem;
+            font-weight: 700;
+            border: 1px solid rgba(147, 197, 253, 0.5);
+            border-radius: 999px;
+            padding: 5px 10px;
+            background: rgba(30, 41, 59, 0.45);
+        }
+        .about-link:hover {
+            color: #dbeafe;
+            border-color: rgba(191, 219, 254, 0.9);
+        }
+
+        .subtitle {
+            margin: 0 0 16px;
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        .board-wrap {
+            aspect-ratio: 1 / 1;
+            width: 100%;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+        }
+
+        .square {
+            appearance: none;
+            border: none;
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            min-width: 0;
+            position: relative;
+            cursor: pointer;
+            display: grid;
+            place-items: center;
+            font-size: clamp(1.35rem, 3.2vw, 2rem);
+        }
+        .square:disabled {
+            cursor: wait;
+        }
+
+        .square.light { background: var(--light-square); }
+        .square.dark { background: var(--dark-square); }
+        .square.last-from {
+            outline: 3px solid rgba(250, 204, 21, 0.5);
+            outline-offset: -3px;
+        }
+        .square.last-to {
+            outline: 3px solid rgba(250, 204, 21, 0.95);
+            outline-offset: -3px;
+        }
+        .square.selected { box-shadow: inset 0 0 0 3px var(--selected); }
+        .square.checked::before {
+            content: "";
+            position: absolute;
+            left: 14%;
+            right: 14%;
+            bottom: 7%;
+            height: 5px;
+            border-radius: 999px;
+            background: #ef4444;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.65);
+        }
+        .square.target::after {
+            content: "";
+            width: 22%;
+            height: 22%;
+            border-radius: 999px;
+            background: color-mix(in srgb, var(--target) 75%, transparent);
+            position: absolute;
+        }
+
+        .piece-white { color: #f8fafc; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+        .piece-black { color: #0f172a; text-shadow: 0 1px 2px rgba(255,255,255,.35); }
+        .piece-token {
+            width: min(78%, 48px);
+            aspect-ratio: 1 / 1;
+            display: grid;
+            place-items: center;
+            border-radius: 999px;
+            font-family: "Segoe UI Symbol", "Noto Sans Symbols2", "Arial Unicode MS", ui-sans-serif, sans-serif;
+            font-size: clamp(1.1rem, 2.4vw, 1.35rem);
+            font-weight: 700;
+            line-height: 1;
+            border: 2px solid rgba(15, 23, 42, 0.75);
+            box-shadow: 0 2px 5px rgba(2, 6, 23, 0.35);
+            user-select: none;
+        }
+        .piece-token-white {
+            background: #ffffff;
+            color: #0f172a;
+        }
+        .piece-token-black {
+            background: #0b1220;
+            color: #f8fafc;
+            border-color: rgba(248, 250, 252, 0.55);
+        }
+        .piece-token.dragging {
+            opacity: 0.65;
+            transform: scale(0.96);
+        }
+
+        .status {
+            background: rgba(2, 6, 23, 0.55);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 10px;
+            padding: 10px 12px;
+            margin-bottom: 12px;
+            font-size: 0.95rem;
+            line-height: 1.35;
+        }
+
+        .status.error {
+            border-color: rgba(239, 68, 68, 0.4);
+            color: #fecaca;
+        }
+        .status.thinking {
+            border-color: rgba(34, 197, 94, 0.45);
+            color: #bbf7d0;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+            align-items: center;
+        }
+
+        button.action {
+            background: #1f2937;
+            color: var(--text);
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            border-radius: 8px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        button.action:hover { border-color: rgba(148, 163, 184, 0.55); }
+        button.action:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .select-wrap {
+            display: inline-flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 0.8rem;
+            color: var(--muted);
+        }
+        .label-inline {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .hint {
+            width: 16px;
+            height: 16px;
+            border-radius: 999px;
+            display: inline-grid;
+            place-items: center;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #cbd5e1;
+            border: 1px solid rgba(148, 163, 184, 0.5);
+            background: rgba(15, 23, 42, 0.55);
+            cursor: help;
+            user-select: none;
+        }
+
+        select.action-select {
+            background: #111827;
+            color: var(--text);
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            border-radius: 8px;
+            padding: 7px 10px;
+            min-width: 160px;
+            font-weight: 600;
+        }
+
+        .engine-stats {
+            margin: 4px 0 0;
+            font-size: 0.78rem;
+            color: #93c5fd;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        }
+        .moves {
+            margin: 0;
+            padding-left: 28px;
+            color: var(--muted);
+            max-height: 260px;
+            overflow: auto;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.86rem;
+            line-height: 1.6;
+        }
+        .moves li span {
+            display: inline-block;
+            min-width: 72px;
+            color: var(--text);
+        }
+        .moves-empty, .commentary-empty {
+            margin: 0;
+            color: var(--muted);
+            font-size: 0.82rem;
+        }
+        .commentary {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            display: grid;
+            gap: 8px;
+            max-height: 240px;
+            overflow: auto;
+            font-size: 0.84rem;
+            line-height: 1.4;
+            color: #cbd5e1;
+        }
+        .config-grid {
+            margin-top: 12px;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(150px, 1fr));
+            gap: 10px;
+        }
+        .config-input {
+            width: 100%;
+            background: #111827;
+            color: var(--text);
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            border-radius: 8px;
+            padding: 7px 10px;
+            font-weight: 600;
+        }
+        .config-help {
+            margin-top: 8px;
+            font-size: 0.8rem;
+            color: var(--muted);
+        }
+        #thinkPresetSlider {
+            width: 170px;
+            accent-color: #60a5fa;
+        }
+        #thinkPresetLabel {
+            font-size: 0.78rem;
+            color: #cbd5e1;
+            font-weight: 600;
+        }
+        .board-wrap.thinking {
+            opacity: 0.92;
+        }
+        .board-shell {
+            display: grid;
+            grid-template-columns: 24px 1fr 24px;
+            grid-template-rows: 18px 1fr 18px;
+            align-items: center;
+            justify-items: center;
+            gap: 4px;
+        }
+        .file-labels {
+            width: 100%;
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            color: #cbd5e1;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+        .file-labels span {
+            justify-self: center;
+        }
+        .rank-labels {
+            height: 100%;
+            display: grid;
+            grid-template-rows: repeat(8, 1fr);
+            color: #cbd5e1;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+        .rank-labels span {
+            align-self: center;
+        }
+        .tree-panel {
+            margin-top: 0;
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            background: rgba(2, 6, 23, 0.45);
+        }
+        .tree-title {
+            margin: 0 0 6px;
+            font-size: 0.86rem;
+            color: #cbd5e1;
+            font-weight: 700;
+        }
+        .tree-legend {
+            margin: 0 0 8px;
+            font-size: 0.76rem;
+            color: var(--muted);
+        }
+        .tree-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 0 0 8px;
+            font-size: 0.74rem;
+            color: #cbd5e1;
+        }
+        .tree-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            user-select: none;
+        }
+        .tree-toggle input {
+            accent-color: #60a5fa;
+        }
+        .tree-stats {
+            margin: 0 0 8px;
+            font-size: 0.74rem;
+            color: #93c5fd;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        }
+        .tree-canvas-wrap {
+            width: 100%;
+            aspect-ratio: 16 / 10;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.65), rgba(2, 6, 23, 0.86));
+        }
+        #treeCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        .right-section {
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            border-radius: 10px;
+            background: rgba(2, 6, 23, 0.42);
+            overflow: hidden;
+        }
+        .right-section > summary {
+            list-style: none;
+            cursor: pointer;
+            padding: 10px 12px;
+            font-size: 0.84rem;
+            font-weight: 700;
+            color: #cbd5e1;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+            user-select: none;
+        }
+        .right-section > summary::-webkit-details-marker {
+            display: none;
+        }
+        .right-section > summary::before {
+            content: "▸";
+            display: inline-block;
+            margin-right: 8px;
+            color: #93c5fd;
+            transition: transform 120ms ease;
+        }
+        .right-section[open] > summary::before {
+            transform: rotate(90deg);
+        }
+        .right-section-body {
+            padding: 10px 12px 12px;
+        }
+        .coach-chat-panel {
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            min-height: min(76vh, 860px);
+            height: 100%;
+            background: linear-gradient(180deg, rgba(8, 13, 24, 0.96), rgba(2, 6, 23, 0.98));
+        }
+        .coach-header {
+            padding: 14px 14px 10px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+        }
+        .coach-messages {
+            margin: 0;
+            padding: 12px 12px 10px;
+            list-style: none;
+            overflow: auto;
+            color: #cbd5e1;
+            font-size: 0.86rem;
+            line-height: 1.42;
+            display: grid;
+            gap: 10px;
+            align-content: start;
+        }
+        .coach-status {
+            margin: 4px 0 0;
+            color: var(--muted);
+            font-size: 0.75rem;
+        }
+        .coach-msg {
+            border-radius: 14px;
+            padding: 10px 12px;
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            background: rgba(30, 41, 59, 0.42);
+            max-width: 92%;
+            margin-right: auto;
+        }
+        .coach-msg-assistant {
+            border-color: rgba(148, 163, 184, 0.25);
+            background: rgba(30, 41, 59, 0.52);
+        }
+        .coach-msg-user {
+            margin-left: auto;
+            margin-right: 0;
+            border-color: rgba(96, 165, 250, 0.6);
+            background: linear-gradient(180deg, rgba(37, 99, 235, 0.35), rgba(29, 78, 216, 0.28));
+        }
+        .coach-msg-role {
+            display: block;
+            font-size: 0.72rem;
+            color: #bfdbfe;
+            margin-bottom: 5px;
+            letter-spacing: 0.01em;
+        }
+        .coach-form {
+            margin-top: 0;
+            padding: 10px 12px 12px;
+            border-top: 1px solid rgba(148, 163, 184, 0.14);
+            background: rgba(2, 6, 23, 0.88);
+            display: grid;
+            gap: 8px;
+        }
+        .coach-input-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 8px;
+            align-items: center;
+        }
+        .coach-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .coach-chip {
+            background: rgba(15, 23, 42, 0.85);
+            color: #bfdbfe;
+            border: 1px solid rgba(96, 165, 250, 0.45);
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-size: 0.74rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .coach-chip:hover {
+            border-color: rgba(147, 197, 253, 0.85);
+            color: #dbeafe;
+        }
+        .coach-chip:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+        .coach-input {
+            width: 100%;
+            background: #111827;
+            color: var(--text);
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 0.86rem;
+        }
+        #coachSendBtn {
+            min-width: 84px;
+        }
+
+        @media (max-width: 860px) {
+            .layout { grid-template-columns: 1fr; width: auto; margin: 16px; }
+            .board-panel { order: -1; }
+            .coach-chat-panel {
+                min-height: 62vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="layout">
+        <aside class="coach-panel">
+            <section class="coach-chat-panel" aria-label="Coach chat">
+                <div class="coach-header">
+                    <h3 class="tree-title">Coach</h3>
+                    <p id="coachStatus" class="coach-status">Coach ready.</p>
+                </div>
+                <ol id="coachMessages" class="coach-messages"></ol>
+                <form id="coachForm" class="coach-form">
+                    <div class="coach-input-row">
+                        <input
+                            id="coachInput"
+                            class="coach-input"
+                            type="text"
+                            maxlength="500"
+                            placeholder="Message Coach..."
+                        />
+                        <button id="coachSendBtn" type="submit" class="action">Send</button>
+                    </div>
+                    <div id="coachChips" class="coach-chips">
+                        <button type="button" class="coach-chip" data-prompt="What opening are White and Black playing right now?">Opening ID</button>
+                        <button type="button" class="coach-chip" data-prompt="What are my best candidate moves in this position?">Best candidates</button>
+                        <button type="button" class="coach-chip" data-prompt="Any tactical shots for me right now (checks, captures, threats)?">Tactical shots</button>
+                        <button type="button" class="coach-chip" data-prompt="What pieces are pinned or under pressure and how should I react?">Pins & pressure</button>
+                    </div>
+                </form>
+            </section>
+        </aside>
+
+        <section class="board-panel">
+            <div class="title-row">
+                <h1 class="title">Chess vs Engine</h1>
+                <a class="about-link" href="/about.html">How it works</a>
+            </div>
+            <p class="subtitle">You play White. Drag a piece, or click it and then a highlighted square.</p>
+            <div class="board-shell" aria-label="Chessboard with coordinates">
+                <div></div>
+                <div class="file-labels" aria-hidden="true">
+                    <span>a</span><span>b</span><span>c</span><span>d</span><span>e</span><span>f</span><span>g</span><span>h</span>
+                </div>
+                <div></div>
+
+                <div class="rank-labels" aria-hidden="true">
+                    <span>8</span><span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span>
+                </div>
+                <div id="board" class="board-wrap" aria-label="Chessboard"></div>
+                <div class="rank-labels" aria-hidden="true">
+                    <span>8</span><span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span>
+                </div>
+
+                <div></div>
+                <div class="file-labels" aria-hidden="true">
+                    <span>a</span><span>b</span><span>c</span><span>d</span><span>e</span><span>f</span><span>g</span><span>h</span>
+                </div>
+                <div></div>
+            </div>
+        </section>
+
+        <aside class="info-panel">
+            <details class="right-section" open>
+                <summary>Game status</summary>
+                <div class="right-section-body">
+                    <div id="status" class="status">Loading game...</div>
+                    <div id="meta"></div>
+                    <p id="engineStats" class="engine-stats"></p>
+                </div>
+            </details>
+
+            <details class="right-section" open>
+                <summary>Engine</summary>
+                <div class="right-section-body">
+                    <div class="controls">
+                        <label class="select-wrap">
+                            <span class="label-inline">Opponent <span class="hint" title="Choose the engine used for Black moves.">?</span></span>
+                            <select id="aiSelect" class="action-select" aria-label="Bot AI selection"></select>
+                        </label>
+                        <label class="select-wrap">
+                            <span class="label-inline">Move-time profile <span class="hint" title="Instantly switch engine strength/latency presets for MCTS modes.">?</span></span>
+                            <input id="thinkPresetSlider" type="range" min="0" max="2" step="1" value="1" />
+                            <span id="thinkPresetLabel">Rapid</span>
+                        </label>
+                        <button id="newGameBtn" class="action">New game</button>
+                        <button id="maxSettingsBtn" class="action" title="Switch to Ultra and set every search setting to its maximum.">Max strength</button>
+                    </div>
+                    <div id="mctsConfig" class="config-grid">
+                        <label class="select-wrap">
+                            <span class="label-inline">Depth <span class="hint" title="Maximum search depth in plies (half-moves). Higher is usually stronger but slower.">?</span></span>
+                            <input id="mctsDepthInput" class="config-input" type="number" />
+                        </label>
+                        <label class="select-wrap">
+                            <span class="label-inline">Iterations <span class="hint" title="Search work budget used by the engine. More iterations usually improve quality and increase compute time.">?</span></span>
+                            <input id="mctsIterationsInput" class="config-input" type="number" />
+                        </label>
+                        <label class="select-wrap">
+                            <span class="label-inline">Think time (ms) <span class="hint" title="Maximum thinking time per engine move in milliseconds.">?</span></span>
+                            <input id="mctsThinkTimeInput" class="config-input" type="number" />
+                        </label>
+                        <label class="select-wrap">
+                            <span class="label-inline">Branching cap <span class="hint" title="Maximum number of candidate moves considered at each node after ordering.">?</span></span>
+                            <input id="mctsBranchingInput" class="config-input" type="number" />
+                        </label>
+                        <label class="select-wrap">
+                            <span class="label-inline">Rollout depth <span class="hint" title="Depth limit for tactical extension/evaluation horizon in the search stack.">?</span></span>
+                            <input id="mctsRolloutInput" class="config-input" type="number" />
+                        </label>
+                    </div>
+                    <div class="config-help">More depth, iterations and think time make the engine stronger but slower.</div>
+                </div>
+            </details>
+
+            <details class="right-section" open>
+                <summary>Search tree</summary>
+                <div class="right-section-body">
+                    <section class="tree-panel" aria-label="Search tree visualization">
+                        <div class="tree-toolbar">
+                            <label class="tree-toggle">
+                                <input id="treeDepthBandsToggle" type="checkbox" checked />
+                                Depth bands
+                            </label>
+                            <label class="tree-toggle">
+                                <input id="treePvToggle" type="checkbox" checked />
+                                Principal path
+                            </label>
+                        </div>
+                        <p id="treeLegend" class="tree-legend">Idle.</p>
+                        <p id="treeStats" class="tree-stats">nodes=0 depth=0 frontier=0 leaves=0</p>
+                        <div class="tree-canvas-wrap">
+                            <canvas id="treeCanvas"></canvas>
+                        </div>
+                    </section>
+                </div>
+            </details>
+
+            <details class="right-section" open>
+                <summary>Moves</summary>
+                <div class="right-section-body">
+                    <p id="movesEmpty" class="moves-empty">No moves yet.</p>
+                    <ol id="movesList" class="moves"></ol>
+                </div>
+            </details>
+
+            <details class="right-section">
+                <summary>Commentary</summary>
+                <div class="right-section-body">
+                    <p id="commentaryEmpty" class="commentary-empty">No commentary yet.</p>
+                    <ul id="commentaryList" class="commentary"></ul>
+                </div>
+            </details>
+        </aside>
+    </main>
+
+    <script>
+        const PIECE_GLYPHS = {
+            wK: "♔", wQ: "♕", wR: "♖", wB: "♗", wN: "♘", wP: "♙",
+            bK: "♚", bQ: "♛", bR: "♜", bB: "♝", bN: "♞", bP: "♟"
+        };
+
+        let state = null;
+        let selectedSquare = null;
+        let pending = false;
+        let engineThinking = false;
+        let statusIsError = false;
+        let statusIsThinking = false;
+        let draggedFromSquare = null;
+        let draggingElement = null;
+        let thinkingTimerId = null;
+        let thinkingStartedAtMs = 0;
+        let spinnerFrame = 0;
+
+        const boardEl = document.getElementById("board");
+        const statusEl = document.getElementById("status");
+        const metaEl = document.getElementById("meta");
+        const engineStatsEl = document.getElementById("engineStats");
+        const movesListEl = document.getElementById("movesList");
+        const movesEmptyEl = document.getElementById("movesEmpty");
+        const commentaryListEl = document.getElementById("commentaryList");
+        const commentaryEmptyEl = document.getElementById("commentaryEmpty");
+        const newGameBtn = document.getElementById("newGameBtn");
+        const maxSettingsBtn = document.getElementById("maxSettingsBtn");
+        const aiSelectEl = document.getElementById("aiSelect");
+        const thinkPresetSliderEl = document.getElementById("thinkPresetSlider");
+        const thinkPresetLabelEl = document.getElementById("thinkPresetLabel");
+        const mctsConfigEl = document.getElementById("mctsConfig");
+        const mctsDepthInputEl = document.getElementById("mctsDepthInput");
+        const mctsIterationsInputEl = document.getElementById("mctsIterationsInput");
+        const mctsThinkTimeInputEl = document.getElementById("mctsThinkTimeInput");
+        const mctsBranchingInputEl = document.getElementById("mctsBranchingInput");
+        const mctsRolloutInputEl = document.getElementById("mctsRolloutInput");
+        const treeCanvasEl = document.getElementById("treeCanvas");
+        const treeLegendEl = document.getElementById("treeLegend");
+        const treeStatsEl = document.getElementById("treeStats");
+        const treeDepthBandsToggleEl = document.getElementById("treeDepthBandsToggle");
+        const treePvToggleEl = document.getElementById("treePvToggle");
+        const coachMessagesEl = document.getElementById("coachMessages");
+        const coachStatusEl = document.getElementById("coachStatus");
+        const coachFormEl = document.getElementById("coachForm");
+        const coachChipsEl = document.getElementById("coachChips");
+        const coachInputEl = document.getElementById("coachInput");
+        const coachSendBtnEl = document.getElementById("coachSendBtn");
+        const treeContext = treeCanvasEl.getContext("2d");
+
+        const treeVizState = {
+            rafId: null,
+            startMs: 0,
+            maxDepth: 8,
+            maxNodes: 400,
+            nodes: [],
+            edges: [],
+            frontier: [],
+            leaves: [],
+            spawned: 0,
+            depthCounts: [],
+            maxFrontier: 0
+        };
+        let coachPending = false;
+        const AI_LABELS = {
+            random: "Random",
+            mcts_fast: "Fast",
+            mcts_strong: "Strong (slower)",
+            mcts_ultra: "Ultra (slowest)"
+        };
+        const THINK_PRESETS = [
+            { key: "blitz", label: "Blitz", values: { mctsDepth: 8, mctsIterations: 700, mctsThinkTimeMs: 700, mctsBranching: 18, mctsRolloutDepth: 12 } },
+            { key: "rapid", label: "Rapid", values: { mctsDepth: 12, mctsIterations: 1800, mctsThinkTimeMs: 2500, mctsBranching: 22, mctsRolloutDepth: 16 } },
+            { key: "deep", label: "Deep Think", values: { mctsDepth: 18, mctsIterations: 5200, mctsThinkTimeMs: 9000, mctsBranching: 26, mctsRolloutDepth: 22 } }
+        ];
+
+        async function fetchState() {
+            const response = await fetch("/api/state");
+            if (!response.ok) {
+                throw new Error("Could not load game state.");
+            }
+            state = await response.json();
+            selectedSquare = null;
+            setStatus(state.message || "Game ready.", false);
+            render();
+        }
+
+        function squareAt(x, y) {
+            return `${"abcdefgh"[x]}${"87654321"[y]}`;
+        }
+
+        function moveIsTarget(square) {
+            if (!selectedSquare || !state?.legalMoves?.[selectedSquare]) {
+                return false;
+            }
+            return state.legalMoves[selectedSquare].includes(square);
+        }
+
+        function setStatus(message, isError, isThinking = false) {
+            statusIsError = Boolean(isError);
+            statusIsThinking = Boolean(isThinking);
+            statusEl.textContent = message;
+            statusEl.className = `status${statusIsError ? " error" : ""}${statusIsThinking ? " thinking" : ""}`;
+        }
+
+        function resizeTreeCanvas() {
+            const dpr = window.devicePixelRatio || 1;
+            const rect = treeCanvasEl.getBoundingClientRect();
+            const width = Math.max(1, Math.floor(rect.width * dpr));
+            const height = Math.max(1, Math.floor(rect.height * dpr));
+            if (treeCanvasEl.width !== width || treeCanvasEl.height !== height) {
+                treeCanvasEl.width = width;
+                treeCanvasEl.height = height;
+            }
+        }
+
+        function clearTreeCanvas() {
+            resizeTreeCanvas();
+            treeContext.clearRect(0, 0, treeCanvasEl.width, treeCanvasEl.height);
+        }
+
+        function resetTreeVisualization() {
+            const configuredDepth = state?.aiConfig?.mctsDepth ?? 10;
+            const configuredIterations = state?.aiConfig?.mctsIterations ?? 700;
+            treeVizState.maxDepth = Math.max(3, Math.min(12, configuredDepth));
+            treeVizState.maxNodes = Math.max(140, Math.min(900, Math.floor(configuredIterations * 0.45)));
+            treeVizState.nodes = [];
+            treeVizState.edges = [];
+            treeVizState.frontier = [];
+            treeVizState.leaves = [];
+            treeVizState.spawned = 0;
+            treeVizState.depthCounts = Array(treeVizState.maxDepth + 1).fill(0);
+            treeVizState.maxFrontier = 1;
+
+            const root = { x: 0.5, y: 0.08, depth: 0, spread: 0.42, children: 0, parent: -1 };
+            treeVizState.nodes.push(root);
+            treeVizState.frontier.push(0);
+            treeVizState.leaves.push(0);
+            treeVizState.depthCounts[0] = 1;
+        }
+
+        function spawnTreeNode() {
+            if (!treeVizState.frontier.length || treeVizState.nodes.length >= treeVizState.maxNodes) {
+                return false;
+            }
+
+            const frontierIdx = Math.floor(Math.random() * treeVizState.frontier.length);
+            const parentIndex = treeVizState.frontier[frontierIdx];
+            const parent = treeVizState.nodes[parentIndex];
+            if (!parent) {
+                return false;
+            }
+
+            if (parent.depth >= treeVizState.maxDepth) {
+                treeVizState.frontier.splice(frontierIdx, 1);
+                return false;
+            }
+
+            const childDepth = parent.depth + 1;
+            const baseSpread = Math.max(0.04, parent.spread * 0.58);
+            const horizontalOffset = (Math.random() - 0.5) * (baseSpread * 2.2);
+            const jitter = (Math.random() - 0.5) * 0.03;
+            const childX = Math.min(0.95, Math.max(0.05, parent.x + horizontalOffset + jitter));
+            const childY = Math.min(0.96, 0.08 + (childDepth / (treeVizState.maxDepth + 1)) * 0.86 + (Math.random() - 0.5) * 0.02);
+
+            const child = { x: childX, y: childY, depth: childDepth, spread: baseSpread, children: 0, parent: parentIndex };
+            const childIndex = treeVizState.nodes.length;
+            treeVizState.nodes.push(child);
+            treeVizState.edges.push([parentIndex, childIndex]);
+            treeVizState.frontier.push(childIndex);
+            treeVizState.leaves.push(childIndex);
+            parent.children += 1;
+            treeVizState.depthCounts[childDepth] = (treeVizState.depthCounts[childDepth] || 0) + 1;
+            treeVizState.maxFrontier = Math.max(treeVizState.maxFrontier, treeVizState.frontier.length);
+
+            if (parent.children >= 3 || Math.random() < 0.25) {
+                const removeAt = treeVizState.frontier.indexOf(parentIndex);
+                if (removeAt >= 0) {
+                    treeVizState.frontier.splice(removeAt, 1);
+                }
+            }
+
+            treeVizState.spawned += 1;
+            return true;
+        }
+
+        function depthRatio(depth) {
+            return Math.max(0, Math.min(1, depth / Math.max(1, treeVizState.maxDepth)));
+        }
+
+        function getPrincipalPathIndices() {
+            if (!treeVizState.nodes.length) {
+                return [];
+            }
+            let deepestIndex = 0;
+            let deepestDepth = -1;
+            for (let i = 0; i < treeVizState.nodes.length; i++) {
+                const node = treeVizState.nodes[i];
+                if (node.depth > deepestDepth) {
+                    deepestDepth = node.depth;
+                    deepestIndex = i;
+                }
+            }
+            const path = [];
+            let cursor = deepestIndex;
+            while (cursor >= 0) {
+                path.push(cursor);
+                const parent = treeVizState.nodes[cursor]?.parent;
+                if (typeof parent !== "number" || parent < 0) {
+                    break;
+                }
+                cursor = parent;
+            }
+            path.reverse();
+            return path;
+        }
+
+        function renderTreeStats(elapsedSecText) {
+            const leafCount = treeVizState.nodes.filter((node) => node.children === 0).length;
+            const frontierCount = treeVizState.frontier.length;
+            const maxWidth = treeVizState.depthCounts.length ? Math.max(...treeVizState.depthCounts) : 0;
+            treeStatsEl.textContent = `nodes=${treeVizState.nodes.length} depth=${treeVizState.maxDepth} frontier=${frontierCount} leaves=${leafCount} width=${maxWidth} t=${elapsedSecText}s`;
+        }
+
+        function renderTreeVisualization() {
+            clearTreeCanvas();
+            const width = treeCanvasEl.width;
+            const height = treeCanvasEl.height;
+
+            treeContext.lineCap = "round";
+            treeContext.lineJoin = "round";
+            const showDepthBands = Boolean(treeDepthBandsToggleEl?.checked);
+            const showPv = Boolean(treePvToggleEl?.checked);
+            const pvPath = showPv ? getPrincipalPathIndices() : [];
+            const pvEdgeSet = new Set();
+            const pvNodeSet = new Set(pvPath);
+            for (let i = 1; i < pvPath.length; i++) {
+                pvEdgeSet.add(`${pvPath[i - 1]}-${pvPath[i]}`);
+            }
+
+            if (showDepthBands) {
+                for (let d = 1; d <= treeVizState.maxDepth; d++) {
+                    const y = (0.08 + (d / (treeVizState.maxDepth + 1)) * 0.86) * height;
+                    const alpha = 0.06 + depthRatio(d) * 0.08;
+                    treeContext.strokeStyle = `rgba(148, 163, 184, ${alpha.toFixed(3)})`;
+                    treeContext.lineWidth = Math.max(1, 1 * (window.devicePixelRatio || 1));
+                    treeContext.beginPath();
+                    treeContext.moveTo(0, y);
+                    treeContext.lineTo(width, y);
+                    treeContext.stroke();
+                }
+            }
+
+            for (const [fromIndex, toIndex] of treeVizState.edges) {
+                const from = treeVizState.nodes[fromIndex];
+                const to = treeVizState.nodes[toIndex];
+                if (!from || !to) {
+                    continue;
+                }
+                const edgeKey = `${fromIndex}-${toIndex}`;
+                const onPv = pvEdgeSet.has(edgeKey);
+                const alpha = onPv ? 0.95 : 0.22 + (to.depth / (treeVizState.maxDepth + 1)) * 0.45;
+                treeContext.strokeStyle = onPv ? "rgba(251, 191, 36, 0.95)" : `rgba(96, 165, 250, ${alpha.toFixed(3)})`;
+                treeContext.lineWidth = Math.max(1, (onPv ? 3.2 : (2.6 - to.depth * 0.12)) * (window.devicePixelRatio || 1));
+                treeContext.beginPath();
+                treeContext.moveTo(from.x * width, from.y * height);
+                treeContext.lineTo(to.x * width, to.y * height);
+                treeContext.stroke();
+            }
+
+            for (let i = 0; i < treeVizState.nodes.length; i++) {
+                const node = treeVizState.nodes[i];
+                const radius = Math.max(1.2, 3.6 - node.depth * 0.18) * (window.devicePixelRatio || 1);
+                const isFrontier = treeVizState.frontier.includes(i);
+                const isLeaf = node.children === 0;
+                if (i === 0) {
+                    treeContext.fillStyle = "rgba(245, 158, 11, 0.96)";
+                } else if (pvNodeSet.has(i)) {
+                    treeContext.fillStyle = "rgba(251, 191, 36, 0.92)";
+                } else if (isFrontier) {
+                    treeContext.fillStyle = "rgba(74, 222, 128, 0.95)";
+                } else if (isLeaf) {
+                    treeContext.fillStyle = "rgba(196, 181, 253, 0.9)";
+                } else {
+                    treeContext.fillStyle = "rgba(191, 219, 254, 0.86)";
+                }
+                treeContext.beginPath();
+                treeContext.arc(node.x * width, node.y * height, radius, 0, Math.PI * 2);
+                treeContext.fill();
+            }
+        }
+
+        function animateTreeVisualization(timestamp) {
+            if (!engineThinking) {
+                return;
+            }
+            if (treeVizState.startMs === 0) {
+                treeVizState.startMs = timestamp;
+            }
+
+            const growthBurst = Math.max(1, Math.floor((state?.aiConfig?.mctsBranching ?? 18) / 6));
+            for (let i = 0; i < growthBurst; i++) {
+                spawnTreeNode();
+            }
+
+            renderTreeVisualization();
+            const elapsedSec = ((timestamp - treeVizState.startMs) / 1000).toFixed(1);
+            treeLegendEl.textContent = "Live approximate search expansion — gold path is the current principal line.";
+            renderTreeStats(elapsedSec);
+            treeVizState.rafId = requestAnimationFrame(animateTreeVisualization);
+        }
+
+        function startTreeVisualization() {
+            resetTreeVisualization();
+            treeVizState.startMs = 0;
+            if (treeVizState.rafId !== null) {
+                cancelAnimationFrame(treeVizState.rafId);
+            }
+            treeVizState.rafId = requestAnimationFrame(animateTreeVisualization);
+        }
+
+        function stopTreeVisualization(finalMessage) {
+            if (treeVizState.rafId !== null) {
+                cancelAnimationFrame(treeVizState.rafId);
+                treeVizState.rafId = null;
+            }
+            renderTreeVisualization();
+            treeLegendEl.textContent = finalMessage || `Last search visualized ${treeVizState.nodes.length} nodes.`;
+            const elapsed = treeVizState.startMs > 0 ? ((performance.now() - treeVizState.startMs) / 1000).toFixed(1) : "0.0";
+            renderTreeStats(elapsed);
+        }
+
+        function startThinkingStatus() {
+            engineThinking = true;
+            thinkingStartedAtMs = performance.now();
+            spinnerFrame = 0;
+            startTreeVisualization();
+            if (thinkingTimerId !== null) {
+                clearInterval(thinkingTimerId);
+            }
+
+            const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+            const update = () => {
+                const elapsed = ((performance.now() - thinkingStartedAtMs) / 1000).toFixed(1);
+                const marker = frames[spinnerFrame % frames.length];
+                spinnerFrame += 1;
+                setStatus(`${marker} Engine thinking… ${elapsed}s`, false, true);
+            };
+
+            update();
+            thinkingTimerId = setInterval(update, 100);
+        }
+
+        function stopThinkingStatus() {
+            engineThinking = false;
+            stopTreeVisualization("Search complete.");
+            if (thinkingTimerId !== null) {
+                clearInterval(thinkingTimerId);
+                thinkingTimerId = null;
+            }
+        }
+
+        function render() {
+            renderBoard();
+            renderMeta();
+            renderMoves();
+            renderAiSelector();
+            renderAiConfig();
+            renderCommentary(state?.commentary || []);
+            renderCoach(state?.coach || null);
+        }
+
+        function renderBoard() {
+            boardEl.innerHTML = "";
+            boardEl.classList.toggle("thinking", pending || engineThinking);
+            const latestMove = state?.lastMoves?.length ? state.lastMoves[state.lastMoves.length - 1] : null;
+            const lastFrom = latestMove?.from || null;
+            const lastTo = latestMove?.to || null;
+            for (let y = 0; y < 8; y++) {
+                for (let x = 0; x < 8; x++) {
+                    const square = squareAt(x, y);
+                    const button = document.createElement("button");
+                    button.type = "button";
+                    button.className = `square ${(x + y) % 2 === 0 ? "light" : "dark"}`;
+                    button.disabled = pending || engineThinking || Boolean(state?.gameOver);
+                    if (square === lastFrom) {
+                        button.classList.add("last-from");
+                    }
+                    if (square === lastTo) {
+                        button.classList.add("last-to");
+                    }
+                    if (square === selectedSquare) {
+                        button.classList.add("selected");
+                    } else if (moveIsTarget(square)) {
+                        button.classList.add("target");
+                    }
+                    if (state.checkedKingSquare && square === state.checkedKingSquare) {
+                        button.classList.add("checked");
+                    }
+                    button.dataset.square = square;
+                    button.setAttribute("aria-label", `Square ${square}`);
+                    button.addEventListener("click", () => onSquareClick(square));
+                    button.addEventListener("dragover", (event) => onSquareDragOver(square, event));
+                    button.addEventListener("drop", (event) => onSquareDrop(square, event));
+
+                    const piece = state.board[y][x];
+                    if (piece) {
+                        const span = document.createElement("span");
+                        span.textContent = PIECE_GLYPHS[piece] || "";
+                        span.className = `piece-token ${piece[0] === "w" ? "piece-token-white" : "piece-token-black"}`;
+                        const movable = canSelect(square) && !pending && !engineThinking && !state.gameOver;
+                        span.draggable = movable;
+                        if (movable) {
+                            span.addEventListener("dragstart", (event) => onPieceDragStart(square, span, event));
+                            span.addEventListener("dragend", onPieceDragEnd);
+                        }
+                        button.appendChild(span);
+                    }
+                    boardEl.appendChild(button);
+                }
+            }
+        }
+
+        function renderMeta() {
+            const capitalize = (text) => `${text[0].toUpperCase()}${text.slice(1)}`;
+            const badges = [
+                state.gameOver ? state.result : `${capitalize(state.turn)} to move`,
+                `vs ${AI_LABELS[state.aiMode] || state.aiMode}`
+            ];
+            if (state.inCheck && !state.gameOver) {
+                badges.push(`${capitalize(state.checkedSide)} in check`);
+            }
+            metaEl.innerHTML = "";
+            for (const text of badges) {
+                const badge = document.createElement("div");
+                badge.className = "badge";
+                badge.textContent = text;
+                metaEl.appendChild(badge);
+            }
+
+            const stats = state.engineStats || {};
+            const isMcts = String(state.aiMode || "").startsWith("mcts");
+            let engineStatsText;
+            if (isMcts && stats.bookMove) {
+                engineStatsText = "Last move: opening book";
+            } else if (isMcts && Number(stats.searchMs) > 0) {
+                engineStatsText = `Last search: depth ${stats.depthReached} · ${Number(stats.nodes || 0).toLocaleString()} nodes · ${Number(stats.nps || 0).toLocaleString()} nps · ${stats.searchMs} ms · eval ${stats.evalCp} cp`;
+            } else {
+                engineStatsText = "";
+            }
+            engineStatsEl.textContent = engineStatsText;
+            engineStatsEl.hidden = !engineStatsText;
+        }
+
+        function renderMoves() {
+            const moves = state.lastMoves || [];
+            movesListEl.innerHTML = "";
+            movesEmptyEl.hidden = moves.length > 0;
+            for (let i = 0; i < moves.length; i += 2) {
+                const li = document.createElement("li");
+                for (const move of moves.slice(i, i + 2)) {
+                    const span = document.createElement("span");
+                    span.textContent = `${move.from}-${move.to}`;
+                    li.appendChild(span);
+                }
+                movesListEl.appendChild(li);
+            }
+            movesListEl.scrollTop = movesListEl.scrollHeight;
+        }
+
+        function renderCommentary(items) {
+            commentaryListEl.innerHTML = "";
+            commentaryEmptyEl.textContent = state?.ollamaEnabled
+                ? `No commentary yet (Ollama · ${state.ollamaModel}).`
+                : "Commentary disabled (set OLLAMA_ENABLED=1).";
+            commentaryEmptyEl.hidden = items.length > 0;
+            for (const item of items.slice(-10)) {
+                const li = document.createElement("li");
+                li.textContent = item.text || "";
+                commentaryListEl.appendChild(li);
+            }
+            commentaryListEl.scrollTop = commentaryListEl.scrollHeight;
+        }
+
+        async function pollCommentary() {
+            if (!state?.ollamaEnabled) {
+                return;
+            }
+            try {
+                const response = await fetch("/api/commentary");
+                if (!response.ok) {
+                    return;
+                }
+                const payload = await response.json();
+                state.commentary = payload.commentary || [];
+                renderCommentary(state.commentary);
+            } catch {
+                // Commentary is best-effort; ignore transient failures.
+            }
+        }
+
+        function renderCoach(coach) {
+            const messages = Array.isArray(coach?.messages) ? coach.messages : [];
+            coachMessagesEl.innerHTML = "";
+            if (!coach?.enabled) {
+                coachStatusEl.textContent = "Coach disabled (set COACH_ENABLED=1 to enable local model-assisted coaching).";
+            } else {
+                coachStatusEl.textContent = `Model: ${coach?.model || "unknown"} · tools: opening/checks/captures/pins`;
+            }
+
+            for (const item of messages.slice(-18)) {
+                const li = document.createElement("li");
+                const role = item.role === "user" ? "You" : "Coach";
+                li.className = `coach-msg ${item.role === "user" ? "coach-msg-user" : "coach-msg-assistant"}`;
+                const roleSpan = document.createElement("span");
+                roleSpan.className = "coach-msg-role";
+                roleSpan.textContent = role;
+                const bodySpan = document.createElement("span");
+                bodySpan.textContent = item.text || "";
+                li.appendChild(roleSpan);
+                li.appendChild(bodySpan);
+                coachMessagesEl.appendChild(li);
+            }
+
+            coachInputEl.disabled = coachPending;
+            coachSendBtnEl.disabled = coachPending;
+            coachSendBtnEl.textContent = coachPending ? "Thinking..." : "Send";
+            for (const chipButton of coachChipsEl.querySelectorAll(".coach-chip")) {
+                chipButton.disabled = coachPending;
+            }
+            coachMessagesEl.scrollTop = coachMessagesEl.scrollHeight;
+        }
+
+        function canSelect(square) {
+            return !engineThinking && state?.turn === "white" && Boolean(state?.legalMoves?.[square]);
+        }
+
+        function clampToRange(value, range) {
+            if (!Array.isArray(range) || range.length !== 2) {
+                return value;
+            }
+            return Math.max(range[0], Math.min(range[1], value));
+        }
+
+        function nearestPresetIndex() {
+            const thinkTime = Number(state?.aiConfig?.mctsThinkTimeMs || 0);
+            let bestIndex = 1;
+            let bestDistance = Number.POSITIVE_INFINITY;
+            for (let i = 0; i < THINK_PRESETS.length; i++) {
+                const candidate = THINK_PRESETS[i].values.mctsThinkTimeMs;
+                const distance = Math.abs(candidate - thinkTime);
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    bestIndex = i;
+                }
+            }
+            return bestIndex;
+        }
+
+        function updateThinkPresetUi() {
+            const isMcts = String(state?.aiMode || "").startsWith("mcts");
+            const selectedIndex = nearestPresetIndex();
+            thinkPresetSliderEl.value = String(selectedIndex);
+            thinkPresetLabelEl.textContent = THINK_PRESETS[selectedIndex].label;
+            thinkPresetSliderEl.disabled = pending || engineThinking || !isMcts;
+            thinkPresetLabelEl.style.opacity = thinkPresetSliderEl.disabled ? "0.6" : "1";
+        }
+
+        function renderAiSelector() {
+            const available = state?.availableAis || [];
+            const selected = state?.aiMode || "";
+            aiSelectEl.innerHTML = "";
+            for (const ai of available) {
+                const option = document.createElement("option");
+                option.value = ai;
+                option.textContent = AI_LABELS[ai] || ai;
+                option.selected = ai === selected;
+                aiSelectEl.appendChild(option);
+            }
+            aiSelectEl.disabled = pending || engineThinking;
+            maxSettingsBtn.disabled = pending || engineThinking;
+            updateThinkPresetUi();
+        }
+
+        function bindConfigInput(inputEl, key) {
+            const [min, max] = state.aiConfigRanges[key];
+            inputEl.min = String(min);
+            inputEl.max = String(max);
+            inputEl.value = String(state.aiConfig[key]);
+            inputEl.disabled = pending || engineThinking || !String(state.aiMode || "").startsWith("mcts");
+        }
+
+        function renderAiConfig() {
+            const isMcts = String(state.aiMode || "").startsWith("mcts");
+            mctsConfigEl.style.display = isMcts ? "grid" : "none";
+            if (!isMcts) {
+                return;
+            }
+            bindConfigInput(mctsDepthInputEl, "mctsDepth");
+            bindConfigInput(mctsIterationsInputEl, "mctsIterations");
+            bindConfigInput(mctsThinkTimeInputEl, "mctsThinkTimeMs");
+            bindConfigInput(mctsBranchingInputEl, "mctsBranching");
+            bindConfigInput(mctsRolloutInputEl, "mctsRolloutDepth");
+        }
+
+        async function onSquareClick(square) {
+            if (pending || engineThinking || !state || state.gameOver) {
+                return;
+            }
+
+            if (!selectedSquare) {
+                if (canSelect(square)) {
+                    selectedSquare = square;
+                    renderBoard();
+                }
+                return;
+            }
+
+            if (square === selectedSquare) {
+                selectedSquare = null;
+                renderBoard();
+                return;
+            }
+
+            if (canSelect(square)) {
+                selectedSquare = square;
+                renderBoard();
+                return;
+            }
+
+            if (!moveIsTarget(square)) {
+                selectedSquare = null;
+                renderBoard();
+                return;
+            }
+
+            await submitMove(selectedSquare, square);
+        }
+
+        function onPieceDragStart(square, element, event) {
+            if (pending || engineThinking || !state || state.gameOver || !canSelect(square) || !event.dataTransfer) {
+                event.preventDefault();
+                return;
+            }
+            draggedFromSquare = square;
+            draggingElement = element;
+            draggingElement.classList.add("dragging");
+            selectedSquare = square;
+            event.dataTransfer.effectAllowed = "move";
+            event.dataTransfer.setData("text/plain", square);
+        }
+
+        function onSquareDragOver(square, event) {
+            if (pending || engineThinking || !selectedSquare || !moveIsTarget(square)) {
+                return;
+            }
+            event.preventDefault();
+            if (event.dataTransfer) {
+                event.dataTransfer.dropEffect = "move";
+            }
+        }
+
+        async function onSquareDrop(square, event) {
+            event.preventDefault();
+            if (pending || engineThinking || !state || state.gameOver) {
+                return;
+            }
+            const fromSquare = (event.dataTransfer && event.dataTransfer.getData("text/plain")) || draggedFromSquare;
+            if (!fromSquare) {
+                return;
+            }
+            if (!state.legalMoves?.[fromSquare]?.includes(square)) {
+                selectedSquare = null;
+                draggedFromSquare = null;
+                renderBoard();
+                return;
+            }
+            await submitMove(fromSquare, square);
+        }
+
+        function onPieceDragEnd() {
+            if (draggingElement) {
+                draggingElement.classList.remove("dragging");
+            }
+            draggingElement = null;
+            draggedFromSquare = null;
+            if (!pending) {
+                selectedSquare = null;
+                renderBoard();
+            }
+        }
+
+        async function submitMove(fromSquare, toSquare) {
+            pending = true;
+            try {
+                const response = await fetch("/api/move", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ from: fromSquare, to: toSquare })
+                });
+                const payload = await response.json();
+                if (!response.ok) {
+                    state = payload.state || state;
+                    setStatus(payload.error || "Move failed.", true, false);
+                    selectedSquare = null;
+                    render();
+                    return;
+                }
+                state = payload;
+                selectedSquare = null;
+                setStatus(state.message || "Move played.", false, false);
+                render();
+
+                if (state.gameOver || !state.isEngineTurn) {
+                    return;
+                }
+
+                startThinkingStatus();
+                renderBoard();
+                setTimeout(() => {
+                    void requestBotMoveFlow();
+                }, 0);
+            } catch (error) {
+                setStatus(error.message || "Network error.", true, false);
+            } finally {
+                pending = false;
+                draggedFromSquare = null;
+                renderBoard();
+            }
+        }
+
+        async function requestBotMoveFlow() {
+            pending = true;
+            try {
+                await requestBotMove();
+                stopThinkingStatus();
+                setStatus(state.message || "Engine move played.", false, false);
+                render();
+            } catch (error) {
+                stopThinkingStatus();
+                setStatus(error.message || "Engine move failed.", true, false);
+                render();
+            } finally {
+                pending = false;
+                selectedSquare = null;
+                draggedFromSquare = null;
+                renderBoard();
+            }
+        }
+
+        async function requestBotMove() {
+            const response = await fetch("/api/bot-move", { method: "POST" });
+            const payload = await response.json();
+            if (!response.ok) {
+                state = payload.state || state;
+                throw new Error(payload.error || "Engine move failed.");
+            }
+            state = payload;
+        }
+
+        async function updateAiSettings(payload) {
+            const response = await fetch("/api/ai", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            const responsePayload = await response.json();
+            if (!response.ok) {
+                state = responsePayload.state || state;
+                throw new Error(responsePayload.error || "Failed to update AI settings.");
+            }
+            state = responsePayload;
+        }
+
+        async function sendCoachMessage(messageText) {
+            const text = String(messageText || "").trim();
+            if (!text || coachPending) {
+                return;
+            }
+            coachPending = true;
+            renderCoach(state?.coach || null);
+            try {
+                const response = await fetch("/api/coach", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message: text })
+                });
+                const payload = await response.json();
+                if (!response.ok) {
+                    throw new Error(payload.error || "Coach request failed.");
+                }
+                if (payload.state) {
+                    state = payload.state;
+                }
+                if (!state.coach) {
+                    state.coach = payload.coach;
+                } else {
+                    state.coach.messages = payload.coach?.messages || state.coach.messages;
+                    state.coach.enabled = payload.coach?.enabled;
+                    state.coach.model = payload.coach?.model;
+                }
+                coachInputEl.value = "";
+                render();
+            } catch (error) {
+                setStatus(error.message || "Coach request failed.", true, false);
+            } finally {
+                coachPending = false;
+                renderCoach(state?.coach || null);
+            }
+        }
+
+        async function setMaxEngineSettings() {
+            if (pending || engineThinking || !state) {
+                return;
+            }
+            const ranges = state.aiConfigRanges || {};
+            const payload = {
+                aiMode: "mcts_ultra",
+            };
+            for (const key of ["mctsDepth", "mctsIterations", "mctsThinkTimeMs", "mctsBranching", "mctsRolloutDepth"]) {
+                if (Array.isArray(ranges[key]) && ranges[key].length === 2) {
+                    payload[key] = ranges[key][1];
+                }
+            }
+
+            pending = true;
+            try {
+                await updateAiSettings(payload);
+                setStatus("Engine set to max settings.", false);
+                render();
+            } catch (error) {
+                setStatus(error.message || "Failed to apply max engine settings.", true);
+            } finally {
+                pending = false;
+                renderAiSelector();
+                renderAiConfig();
+            }
+        }
+
+        async function applyThinkPreset(presetIndex) {
+            if (pending || engineThinking || !state || !String(state.aiMode || "").startsWith("mcts")) {
+                return;
+            }
+            const preset = THINK_PRESETS[presetIndex];
+            if (!preset) {
+                return;
+            }
+            const ranges = state.aiConfigRanges || {};
+            const payload = {};
+            for (const key of ["mctsDepth", "mctsIterations", "mctsThinkTimeMs", "mctsBranching", "mctsRolloutDepth"]) {
+                payload[key] = clampToRange(preset.values[key], ranges[key]);
+            }
+
+            pending = true;
+            try {
+                await updateAiSettings(payload);
+                setStatus(`Applied ${preset.label} profile.`, false);
+                render();
+            } catch (error) {
+                setStatus(error.message || "Failed to apply move-time profile.", true);
+                render();
+            } finally {
+                pending = false;
+                renderAiSelector();
+                renderAiConfig();
+            }
+        }
+
+        newGameBtn.addEventListener("click", async () => {
+            if (pending || engineThinking) {
+                return;
+            }
+            pending = true;
+            try {
+                const response = await fetch("/api/new-game", { method: "POST" });
+                if (!response.ok) {
+                    throw new Error("Could not create new game.");
+                }
+                state = await response.json();
+                selectedSquare = null;
+                setStatus("New game started.", false);
+                render();
+            } catch (error) {
+                setStatus(error.message || "Failed to start new game.", true);
+            } finally {
+                pending = false;
+            }
+        });
+
+        aiSelectEl.addEventListener("change", async () => {
+            if (pending || engineThinking || !state) {
+                return;
+            }
+            pending = true;
+            try {
+                await updateAiSettings({ aiMode: aiSelectEl.value });
+                setStatus(state.message || "AI switched.", false);
+                render();
+            } catch (error) {
+                setStatus(error.message || "Network error while switching AI.", true);
+            } finally {
+                pending = false;
+                renderAiSelector();
+            }
+        });
+
+        maxSettingsBtn.addEventListener("click", async () => {
+            await setMaxEngineSettings();
+        });
+
+        thinkPresetSliderEl.addEventListener("input", () => {
+            const idx = Number.parseInt(thinkPresetSliderEl.value, 10);
+            if (Number.isNaN(idx) || !THINK_PRESETS[idx]) {
+                return;
+            }
+            thinkPresetLabelEl.textContent = THINK_PRESETS[idx].label;
+        });
+
+        thinkPresetSliderEl.addEventListener("change", async () => {
+            const idx = Number.parseInt(thinkPresetSliderEl.value, 10);
+            if (Number.isNaN(idx)) {
+                updateThinkPresetUi();
+                return;
+            }
+            await applyThinkPreset(idx);
+        });
+
+        coachFormEl.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            await sendCoachMessage(coachInputEl.value);
+        });
+
+        coachChipsEl.addEventListener("click", async (event) => {
+            const target = event.target;
+            if (!(target instanceof HTMLButtonElement)) {
+                return;
+            }
+            const prompt = String(target.dataset.prompt || "").trim();
+            if (!prompt) {
+                return;
+            }
+            await sendCoachMessage(prompt);
+        });
+
+        async function onConfigCommit(key, inputEl) {
+            if (pending || engineThinking || !state || !String(state.aiMode || "").startsWith("mcts")) {
+                return;
+            }
+            const nextValue = Number.parseInt(inputEl.value, 10);
+            if (Number.isNaN(nextValue)) {
+                renderAiConfig();
+                return;
+            }
+
+            pending = true;
+            try {
+                await updateAiSettings({ [key]: nextValue });
+                setStatus("AI parameters updated.", false);
+                render();
+            } catch (error) {
+                setStatus(error.message || "Failed to update AI parameters.", true);
+                render();
+            } finally {
+                pending = false;
+                renderAiSelector();
+                renderAiConfig();
+            }
+        }
+
+        [
+            [mctsDepthInputEl, "mctsDepth"],
+            [mctsIterationsInputEl, "mctsIterations"],
+            [mctsThinkTimeInputEl, "mctsThinkTimeMs"],
+            [mctsBranchingInputEl, "mctsBranching"],
+            [mctsRolloutInputEl, "mctsRolloutDepth"]
+        ].forEach(([inputEl, key]) => {
+            inputEl.addEventListener("change", () => onConfigCommit(key, inputEl));
+            inputEl.addEventListener("keydown", (event) => {
+                if (event.key === "Enter") {
+                    onConfigCommit(key, inputEl);
+                }
+            });
+        });
+
+        fetchState().catch((error) => {
+            setStatus(error.message || "Failed to load game.", true);
+        });
+        setInterval(pollCommentary, 4000);
+
+        window.addEventListener("resize", () => {
+            renderTreeVisualization();
+        });
+
+        treeDepthBandsToggleEl.addEventListener("change", () => {
+            renderTreeVisualization();
+        });
+
+        treePvToggleEl.addEventListener("change", () => {
+            renderTreeVisualization();
+        });
+
+        clearTreeCanvas();
+        renderTreeStats("0.0");
+    </script>
+</body>
+</html>

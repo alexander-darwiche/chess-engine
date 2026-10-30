@@ -256,6 +256,7 @@ class Chess():
         # Determine what type of piece is being moved
         type_of_piece = self.chess_pieces_name[self.board[current_position[1]][current_position[0]] * self.current_player]
 
+
         # Check the places the Chess Piece can move.
         valid_moves = getattr(Chess,type_of_piece).movement(self, self.current_player, current_position)
 
